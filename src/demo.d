@@ -24,8 +24,8 @@ void main()
    writefln("%s", h);
    writeln("255");
 
-   double ww = w;
-   double hh = h;
+   double ww = 50;
+   double hh = 50;
    foreach(i; 0..w)
    {
       foreach(j; 0..h)

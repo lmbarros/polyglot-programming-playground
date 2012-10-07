@@ -1,59 +1,21 @@
-/*
- * Mesa 3-D graphics library
- * Version:  6.5
- *
- * Copyright (C) 2006  Brian Paul   All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * BRIAN PAUL BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
- * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
-/*
- * SimplexNoise1234
- * Copyright (c) 2003-2005, Stefan Gustavson
- *
- * Contact: stegu@itn.liu.se
- */
-
 /**
- * \file
- * \brief C implementation of Perlin Simplex Noise over 1, 2, 3 and 4 dims.
- * \author Stefan Gustavson (stegu@itn.liu.se)
+ * Perlin's Simplex Noise over 1, 2, 3 and 4 dimensions.
  *
+ * Authors: Original public-domain C code by Stefan Gustavson
+ * (http://staffwww.itn.liu.se/~stegu/simplexnoise/DSOnoises.zip). D version by
+ * Leandro Motta Barros.
  *
- * This implementation is "Simplex Noise" as presented by
- * Ken Perlin at a relatively obscure and not often cited course
- * session "Real-Time Shading" at Siggraph 2001 (before real
- * time shading actually took on), under the title "hardware noise".
- * The 3D function is numerically equivalent to his Java reference
- * code available in the PDF course notes, although I re-implemented
- * it from scratch to get more readable code. The 1D, 2D and 4D cases
- * were implemented from scratch by me from Ken Perlin's text.
- *
- * This file has no dependencies on any other file, not even its own
- * header file. The header file is made for use by external code only.
+ * See_Also:
+ * https://code.google.com/p/fractalterraingeneration/wiki/Simplex_Noise,
+ * http://staffwww.itn.liu.se/~stegu/simplexnoise
  */
 
+import std.math;
 
-/**
- * This is way faster than simply calling std.math.floor() and casting to an
- * int. With DMD -O -inline, noise generation was almost 10% faster when using
- * this version of FastFloor.
- */
+// LMB: This is way faster than simply calling std.math.floor() and casting to
+//      an int. With DMD 2.060, using flags '-O -inline', noise generation was,
+//      overall, almost 10% faster when using FastFloor() instead of
+//      std.math.floor().
 private pure nothrow int FastFloor(double x)
 {
    return x > 0
@@ -62,22 +24,21 @@ private pure nothrow int FastFloor(double x)
 }
 
 
-/**
- * Permutation table. This is just a random jumble of all numbers 0-255,
- * repeated twice to avoid wrapping the index at 255 for each lookup.  This
- * needs to be exactly the same for all instances on all platforms, so it's
- * easiest to just keep it as static explicit data.  This also removes the need
- * for any initialisation of this class.
- *
- * Note that making this an int[] instead of a char[] might make the code run
- * faster on platforms with a high penalty for unaligned single byte
- * addressing. Intel x86 is generally single-byte-friendly, but some other CPUs
- * are faster with 4-aligned reads.  However, a char[] is smaller, which avoids
- * cache trashing, and that is probably the most important aspect on most
- * architectures.  This array is accessed a *lot* by the noise functions.  A
- * vector-valued noise over 3D accesses it 96 times, and a float-valued 4D noise
- * 64 times. We want this to fit in the cache!
- */
+
+// Permutation table. This is just a random jumble of all numbers 0-255,
+// repeated twice to avoid wrapping the index at 255 for each lookup.  This
+// needs to be exactly the same for all instances on all platforms, so it's
+// easiest to just keep it as static explicit data.  This also removes the need
+// for any initialisation of this class.
+//
+// Note that making this an int[] instead of a char[] might make the code run
+// faster on platforms with a high penalty for unaligned single byte
+// addressing. Intel x86 is generally single-byte-friendly, but some other CPUs
+// are faster with 4-aligned reads.  However, a char[] is smaller, which avoids
+// cache trashing, and that is probably the most important aspect on most
+// architectures.  This array is accessed a *lot* by the noise functions.  A
+// vector-valued noise over 3D accesses it 96 times, and a float-valued 4D noise
+// 64 times. We want this to fit in the cache!
 private immutable ubyte[512] Perm = [
    151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140,
    36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234,
@@ -112,59 +73,67 @@ private immutable ubyte[512] Perm = [
    254, 138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66,
    215, 61, 156, 180 ];
 
-/*
- * Helper functions to compute gradients-dot-residualvectors (1D to 4D)
- * Note that these generate gradients of more than unit length. To make
- * a close match with the value range of classic Perlin noise, the final
- * noise values need to be rescaled to fit nicely within [-1,1].
- * (The simplex noise functions as such also have different scaling.)
- * Note also that these noise functions are the most practical and useful
- * signed version of Perlin noise. To return values according to the
- * RenderMan specification from the SL noise() and pnoise() functions,
- * the noise values need to be scaled and offset to [0,1], like this:
- * float SLnoise = (SimplexNoise1234::noise(x,y,z) + 1.0) * 0.5;
- */
+
+// Helper functions to compute gradients-dot-residualvectors (1D to 4D)
+// Note that these generate gradients of more than unit length. To make
+// a close match with the value range of classic Perlin noise, the final
+// noise values need to be rescaled to fit nicely within [-1,1].
+// (The simplex noise functions as such also have different scaling.)
+// Note also that these noise functions are the most practical and useful
+// signed version of Perlin noise. To return values according to the
+// RenderMan specification from the SL noise() and pnoise() functions,
+// the noise values need to be scaled and offset to [0,1], like this:
+// float SLnoise = (SimplexNoise1234::noise(x,y,z) + 1.0) * 0.5;
 
 private pure nothrow double Grad(int hash, double x)
 {
-   int h = hash & 15;
-   double grad = 1.0 + (h & 7); /* Gradient value 1.0, 2.0, ..., 8.0 */
+   immutable int h = hash & 15;
+   double grad = 1.0 + (h & 7); // gradient value 1.0, 2.0, ..., 8.0
    if (h & 8)
-      grad = -grad;             /* Set a random sign for the gradient */
-   return grad * x;           /* Multiply the gradient with the distance */
+      grad = -grad; // set a random sign for the gradient
+   return grad * x; // multiply the gradient with the distance
 }
 
 private pure nothrow double Grad(int hash, double x, double y)
 {
-   int h = hash & 7;            /* Convert low 3 bits of hash code */
-   double u = h < 4 ? x : y;     /* into 8 simple gradient directions, */
-   double v = h < 4 ? y : x;     /* and compute the dot product with (x,y). */
+   // Convert low 3 bits of hash code into 8 simple gradient directions, and
+   // compute the dot product with (x,y).
+   immutable int h = hash & 7;
+   immutable double u = h < 4 ? x : y;
+   immutable double v = h < 4 ? y : x;
    return ((h & 1) ? -u : u) + ((h & 2) ? -2.0 * v : 2.0 * v);
 }
 
 private pure nothrow double Grad(int hash, double x, double y, double z)
 {
-   int h = hash & 15;           /* Convert low 4 bits of hash code into 12 simple */
-   double u = h < 8 ? x : y;     /* gradient directions, and compute dot product. */
-   double v = h < 4 ? y : h == 12 || h == 14 ? x : z;    /* Fix repeats at h = 12 to 15 */
+   // Convert low 4 bits of hash code into 12 simple gradient directions, and
+   // compute dot product.
+   immutable int h = hash & 15;
+   immutable double u = h < 8 ? x : y;
+
+   // fix repeats at h = 12 to 15
+   immutable double v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+
    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
 }
 
 private pure nothrow double Grad(
    int hash, double x, double y, double z, double t)
 {
-   int h = hash & 31;           /* Convert low 5 bits of hash code into 32 simple */
-   double u = h < 24 ? x : y;    /* gradient directions, and compute dot product. */
-   double v = h < 16 ? y : z;
-   double w = h < 8 ? z : t;
+   // Convert low 5 bits of hash code into 32 simple gradient directions, and
+   // compute dot product.
+   immutable int h = hash & 31;
+   immutable double u = h < 24 ? x : y;
+   immutable double v = h < 16 ? y : z;
+   immutable double w = h < 8 ? z : t;
    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v) + ((h & 4) ? -w : w);
 }
 
-/**
- * A lookup table to traverse the simplex around a given point in 4D.
- * Details can be found where this table is used, in the 4D noise method.
- * TODO: This should not be required, backport it from Bill's GLSL code!
- */
+
+// A lookup table to traverse the simplex around a given point in 4D.
+// Details can be found where this table is used, in the 4D noise method.
+//
+// TODO: This should not be required, backport it from Bill's GLSL code!
 private immutable ubyte[4][64] simplex = [
    [0, 1, 2, 3], [0, 1, 3, 2], [0, 0, 0, 0], [0, 2, 3, 1],
    [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [1, 2, 3, 0],
@@ -188,24 +157,36 @@ private immutable ubyte[4][64] simplex = [
 /** 1D simplex noise */
 double SimplexNoise(double x)
 {
-   int i0 = FastFloor(x);
+   immutable int i0 = FastFloor(x);
    int i1 = i0 + 1;
-   double x0 = x - i0;
-   double x1 = x0 - 1.0;
+   immutable double x0 = x - i0;
+   immutable double x1 = x0 - 1.0;
    double t1 = 1.0 - x1 * x1;
-   double n0, n1;
 
    double t0 = 1.0 - x0 * x0;
-/*  if(t0 < 0.0) t0 = 0.0; // this never happens for the 1D case */
-   t0 *= t0;
-   n0 = t0 * t0 * Grad(Perm[i0 & 0xff], x0);
 
-/*  if(t1 < 0.0) t1 = 0.0; // this never happens for the 1D case */
+   // This never happens for the 1D case
+   // if (t0 < 0.0)
+   //    t0 = 0.0;
+   assert(t0 >= 0.0, "Can't happen");
+
+   t0 *= t0;
+   immutable double n0 = t0 * t0 * Grad(Perm[i0 & 0xff], x0);
+
+   // This never happens for the 1D case
+   // if (t1 < 0.0)
+   //    t1 = 0.0;
+   assert(t1 >= 0.0, "Can't happen");
+
    t1 *= t1;
-   n1 = t1 * t1 * Grad(Perm[i1 & 0xff], x1);
-   /* The maximum value of this noise is 8*(3/4)^4 = 2.53125 */
-   /* A factor of 0.395 would scale to fit exactly within [-1,1], but */
-   /* we want to match PRMan's 1D noise, so we scale it down some more. */
+   immutable double n1 = t1 * t1 * Grad(Perm[i1 & 0xff], x1);
+
+   // LMB: TODO: Make output (for all noise functions!) to be in the same
+   // range. They seem to like [-1, 1], but I think that I like [0, 1] better.
+   //
+   // The maximum value of this noise is 8 * (3/4)^4 = 2.53125.  A factor of
+   // 0.395 would scale to fit exactly within [-1,1], but we want to match
+   // PRMan's 1D noise, so we scale it down some more.
    return 0.25 * (n0 + n1);
 }
 
@@ -213,406 +194,493 @@ double SimplexNoise(double x)
 /** 2D simplex noise */
 double SimplexNoise(double x, double y)
 {
-   immutable F2 = 0.366025403;         /* F2 = 0.5*(sqrt(3.0)-1.0) */
-   immutable G2 = 0.211324865;         /* G2 = (3.0-Math.sqrt(3.0))/6.0 */
+   enum f2 = 0.5 * (sqrt(3.0) - 1.0);
+   enum g2 = (3.0 - sqrt(3.0)) / 6.0;
 
-   double n0, n1, n2;            /* Noise contributions from the three corners */
+   // Skew the input space to determine which simplex cell we're in
+   immutable double s = (x + y) * f2; // hairy factor for 2D
+   immutable double xs = x + s;
+   immutable double ys = y + s;
+   immutable int i = FastFloor(xs);
+   immutable int j = FastFloor(ys);
 
-   /* Skew the input space to determine which simplex cell we're in */
-   double s = (x + y) * F2;      /* Hairy factor for 2D */
-   double xs = x + s;
-   double ys = y + s;
-   int i = FastFloor(xs);
-   int j = FastFloor(ys);
+   immutable double t = (i + j) * g2;
+   immutable double xx0 = i - t;   // unskew the cell origin back to (x,y) space
+   immutable double yy0 = j - t;
+   immutable double x0 = x - xx0;  // the x,y distances from the cell origin
+   immutable double y0 = y - yy0;
 
-   // double t = (double) (i + j) * G2; // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   double t = (i + j) * G2;
-   double X0 = i - t;            /* Unskew the cell origin back to (x,y) space */
-   double Y0 = j - t;
-   double x0 = x - X0;           /* The x,y distances from the cell origin */
-   double y0 = y - Y0;
+   // For the 2D case, the simplex shape is an equilateral triangle.  Determine
+   // which simplex we are in.
 
-   double x1, y1, x2, y2;
-   int ii, jj;
-   double t0, t1, t2;
-
-   /* For the 2D case, the simplex shape is an equilateral triangle. */
-   /* Determine which simplex we are in. */
-   int i1, j1;                  /* Offsets for second (middle) corner of simplex in (i,j) coords */
-   if (x0 > y0) {
+   int i1;  // offsets for second (middle) corner...
+   int j1;  // ...of simplex in (i,j) coords
+   if (x0 > y0)
+   {
       i1 = 1;
       j1 = 0;
-   }                            /* lower triangle, XY order: (0,0)->(1,0)->(1,1) */
-   else {
+   }   // lower triangle, XY order: (0,0)->(1,0)->(1,1)
+   else
+   {
       i1 = 0;
       j1 = 1;
-   }                            /* upper triangle, YX order: (0,0)->(0,1)->(1,1) */
+   }   // upper triangle, YX order: (0,0)->(0,1)->(1,1)
 
-   /* A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and */
-   /* a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where */
-   /* c = (3-sqrt(3))/6 */
+   // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and a step of
+   // (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+   // c = ( 3 - sqrt(3)) / 6
 
-   x1 = x0 - i1 + G2;           /* Offsets for middle corner in (x,y) unskewed coords */
-   y1 = y0 - j1 + G2;
-   x2 = x0 - 1.0 + 2.0 * G2;  /* Offsets for last corner in (x,y) unskewed coords */
-   y2 = y0 - 1.0 + 2.0 * G2;
+   // offsets for middle corner in (x,y) unskewed coords
+   immutable double x1 = x0 - i1 + g2;
+   immutable double y1 = y0 - j1 + g2;
 
-   /* Wrap the integer indices at 256, to avoid indexing Perm[] out of bounds */
-   ii = i % 256;
-   jj = j % 256;
+   // offsets for last corner in (x,y) unskewed coords
+   immutable double x2 = x0 - 1.0 + 2.0 * g2;
+   immutable double y2 = y0 - 1.0 + 2.0 * g2;
 
-   /* Calculate the contribution from the three corners */
-   t0 = 0.5 - x0 * x0 - y0 * y0;
+   // Wrap the integer indices at 256, to avoid indexing Perm[] out of bounds
+   immutable int ii = i % 256;
+   immutable int jj = j % 256;
+
+   // Calculate the contribution from the three corners
+
+   double n0; // noise contributions from the first corner
+   double t0 = 0.5 - x0 * x0 - y0 * y0;
    if (t0 < 0.0)
+   {
       n0 = 0.0;
-   else {
+   }
+   else
+   {
       t0 *= t0;
       n0 = t0 * t0 * Grad(Perm[ii + Perm[jj]], x0, y0);
    }
 
-   t1 = 0.5 - x1 * x1 - y1 * y1;
+   double n1; // noise contributions from the second corner
+   double t1 = 0.5 - x1 * x1 - y1 * y1;
    if (t1 < 0.0)
+   {
       n1 = 0.0;
-   else {
+   }
+   else
+   {
       t1 *= t1;
       n1 = t1 * t1 * Grad(Perm[ii + i1 + Perm[jj + j1]], x1, y1);
    }
 
-   t2 = 0.5 - x2 * x2 - y2 * y2;
+   double n2; // noise contributions from the third corner
+   double t2 = 0.5 - x2 * x2 - y2 * y2;
    if (t2 < 0.0)
+   {
       n2 = 0.0;
-   else {
+   }
+   else
+   {
       t2 *= t2;
       n2 = t2 * t2 * Grad(Perm[ii + 1 + Perm[jj + 1]], x2, y2);
    }
 
-   /* Add contributions from each corner to get the final noise value. */
-   /* The result is scaled to return values in the interval [-1,1]. */
-   // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   // xxxxxxx scale is 70 in Java version
-   return 40.0 * (n0 + n1 + n2);       /* TODO: The scale factor is preliminary! */
+   // Add contributions from each corner to get the final noise value.  The
+   // result is scaled to return values in the interval [-1,1].
+   //
+   // TODO: The scale factor is preliminary!
+   //
+   // LMB: The public domain Java implementation of Simplex Noise by Stefan
+   //      Gustavson (http://staffwww.itn.liu.se/~stegu/simplexnoise), uses 70.0
+   //      as scale.
+   return 40.0 * (n0 + n1 + n2);
 }
 
 
 /** 3D simplex noise */
 double SimplexNoise(double x, double y, double z)
 {
-   /* Simple skewing factors for the 3D case */
-   immutable F3 = 0.333333333;
-   immutable G3 = 0.166666667;
+   // Simple skewing factors for the 3D case
+   enum f3 = 1.0 / 3.0;
+   enum g3 = 1.0 / 6.0;
 
-   double n0, n1, n2, n3;        /* Noise contributions from the four corners */
+   // Skew the input space to determine which simplex cell we're in
 
-   /* Skew the input space to determine which simplex cell we're in */
-   double s = (x + y + z) * F3;  /* Very nice and simple skew factor for 3D */
-   double xs = x + s;
-   double ys = y + s;
-   double zs = z + s;
-   int i = FastFloor(xs);
-   int j = FastFloor(ys);
-   int k = FastFloor(zs);
+   // very nice and simple skew factor for 3D
+   immutable double s = (x + y + z) * f3;
+   immutable double xs = x + s;
+   immutable double ys = y + s;
+   immutable double zs = z + s;
+   immutable int i = FastFloor(xs);
+   immutable int j = FastFloor(ys);
+   immutable int k = FastFloor(zs);
 
-   // double t = (double) (i + j + k) * G3; // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   double t = (i + j + k) * G3;
-   double X0 = i - t;            /* Unskew the cell origin back to (x,y,z) space */
-   double Y0 = j - t;
-   double Z0 = k - t;
-   double x0 = x - X0;           /* The x,y,z distances from the cell origin */
-   double y0 = y - Y0;
-   double z0 = z - Z0;
+   immutable double t = (i + j + k) * g3;
+   immutable double xx0 = i - t; // unskew the cell origin back to (x,y,z) space
+   immutable double yy0 = j - t;
+   immutable double zz0 = k - t;
+   immutable double x0 = x - xx0; // the x,y,z distances from the cell origin
+   immutable double y0 = y - yy0;
+   immutable double z0 = z - zz0;
 
-   double x1, y1, z1, x2, y2, z2, x3, y3, z3;
-   int ii, jj, kk;
-   double t0, t1, t2, t3;
+   // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
+   // Determine which simplex we are in.
 
-   /* For the 3D case, the simplex shape is a slightly irregular tetrahedron. */
-   /* Determine which simplex we are in. */
-   int i1, j1, k1;              /* Offsets for second corner of simplex in (i,j,k) coords */
-   int i2, j2, k2;              /* Offsets for third corner of simplex in (i,j,k) coords */
+   int i1, j1, k1;  // Offsets for second corner of simplex in (i,j,k) coords
+   int i2, j2, k2;  // Offsets for third corner of simplex in (i,j,k) coords
 
-/* This code would benefit from a backport from the GLSL version! */
-   if (x0 >= y0) {
-      if (y0 >= z0) {
+   // This code would benefit from a backport from the GLSL version!
+   if (x0 >= y0)
+   {
+      if (y0 >= z0)
+      {
+         // X Y Z order
          i1 = 1;
          j1 = 0;
          k1 = 0;
          i2 = 1;
          j2 = 1;
          k2 = 0;
-      }                         /* X Y Z order */
-      else if (x0 >= z0) {
+      }
+      else if (x0 >= z0)
+      {
+         // X Z Y order
          i1 = 1;
          j1 = 0;
          k1 = 0;
          i2 = 1;
          j2 = 0;
          k2 = 1;
-      }                         /* X Z Y order */
-      else {
+      }
+      else
+      {
+         // Z X Y order
          i1 = 0;
          j1 = 0;
          k1 = 1;
          i2 = 1;
          j2 = 0;
          k2 = 1;
-      }                         /* Z X Y order */
+      }
    }
-   else {                       /* x0<y0 */
-      if (y0 < z0) {
+   else // x0 < y0
+   {
+      if (y0 < z0)
+      {
+         // Z Y X order
          i1 = 0;
          j1 = 0;
          k1 = 1;
          i2 = 0;
          j2 = 1;
          k2 = 1;
-      }                         /* Z Y X order */
-      else if (x0 < z0) {
+      }
+      else if (x0 < z0)
+      {
+         // Y Z X order
          i1 = 0;
          j1 = 1;
          k1 = 0;
          i2 = 0;
          j2 = 1;
          k2 = 1;
-      }                         /* Y Z X order */
-      else {
+      }
+      else
+      {
+         // Y X Z order
          i1 = 0;
          j1 = 1;
          k1 = 0;
          i2 = 1;
          j2 = 1;
          k2 = 0;
-      }                         /* Y X Z order */
+      }
    }
 
-   /* A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in
-    * (x,y,z), a step of (0,1,0) in (i,j,k) means a step of
-    * (-c,1-c,-c) in (x,y,z), and a step of (0,0,1) in (i,j,k) means a
-    * step of (-c,-c,1-c) in (x,y,z), where c = 1/6.
-    */
+   // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z), a
+   // step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and a
+   // step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where c
+   // = 1/6.
 
-   x1 = x0 - i1 + G3;         /* Offsets for second corner in (x,y,z) coords */
-   y1 = y0 - j1 + G3;
-   z1 = z0 - k1 + G3;
-   x2 = x0 - i2 + 2.0 * G3;  /* Offsets for third corner in (x,y,z) coords */
-   y2 = y0 - j2 + 2.0 * G3;
-   z2 = z0 - k2 + 2.0 * G3;
-   x3 = x0 - 1.0 + 3.0 * G3;/* Offsets for last corner in (x,y,z) coords */
-   y3 = y0 - 1.0 + 3.0 * G3;
-   z3 = z0 - 1.0 + 3.0 * G3;
+   // Offsets for second corner in (x,y,z) coords
+   immutable double x1 = x0 - i1 + g3;
+   immutable double y1 = y0 - j1 + g3;
+   immutable double z1 = z0 - k1 + g3;
 
-   /* Wrap the integer indices at 256 to avoid indexing Perm[] out of bounds */
-   ii = i % 256;
-   jj = j % 256;
-   kk = k % 256;
+   // Offsets for third corner in (x,y,z) coords
+   immutable double x2 = x0 - i2 + 2.0 * g3;
+   immutable double y2 = y0 - j2 + 2.0 * g3;
+   immutable double z2 = z0 - k2 + 2.0 * g3;
 
-   /* Calculate the contribution from the four corners */
-   t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+   // Offsets for last corner in (x,y,z) coords
+   immutable double x3 = x0 - 1.0 + 3.0 * g3;
+   immutable double y3 = y0 - 1.0 + 3.0 * g3;
+   immutable double z3 = z0 - 1.0 + 3.0 * g3;
+
+   // Wrap the integer indices at 256 to avoid indexing Perm[] out of bounds
+   immutable int ii = i % 256;
+   immutable int jj = j % 256;
+   immutable int kk = k % 256;
+
+   // Calculate the contribution from the four corners
+
+   double n0; // noise contribution from the first corner.
+   double t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
    if (t0 < 0.0)
+   {
       n0 = 0.0;
-   else {
+   }
+   else
+   {
       t0 *= t0;
       n0 = t0 * t0 * Grad(Perm[ii + Perm[jj + Perm[kk]]], x0, y0, z0);
    }
 
-   t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+   double n1; // noise contribution from the second corner.
+   double t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
    if (t1 < 0.0)
+   {
       n1 = 0.0;
-   else {
+   }
+   else
+   {
       t1 *= t1;
-      n1 =
-         t1 * t1 * Grad(Perm[ii + i1 + Perm[jj + j1 + Perm[kk + k1]]], x1,
-                         y1, z1);
+      n1 = t1
+         * t1
+         * Grad(Perm[ii + i1 + Perm[jj + j1 + Perm[kk + k1]]], x1, y1, z1);
    }
 
-   t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+   double n2; // noise contribution from the third corner.
+   double t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
    if (t2 < 0.0)
       n2 = 0.0;
    else {
       t2 *= t2;
-      n2 =
-         t2 * t2 * Grad(Perm[ii + i2 + Perm[jj + j2 + Perm[kk + k2]]], x2,
-                         y2, z2);
+      n2 = t2
+         * t2
+         * Grad(Perm[ii + i2 + Perm[jj + j2 + Perm[kk + k2]]], x2, y2, z2);
    }
 
-   t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+   double n3; // noise contribution from the fourth corner.
+   double t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
    if (t3 < 0.0)
+   {
       n3 = 0.0;
-   else {
+   }
+   else
+   {
       t3 *= t3;
-      n3 =
-         t3 * t3 * Grad(Perm[ii + 1 + Perm[jj + 1 + Perm[kk + 1]]], x3, y3,
-                         z3);
+      n3 = t3
+         * t3
+         * Grad(Perm[ii + 1 + Perm[jj + 1 + Perm[kk + 1]]], x3, y3, z3);
    }
 
-   /* Add contributions from each corner to get the final noise value.
-    * The result is scaled to stay just inside [-1,1]
-    */
-   return 32.0 * (n0 + n1 + n2 + n3);  /* TODO: The scale factor is preliminary! */
+   // Add contributions from each corner to get the final noise value.
+   // The result is scaled to stay just inside [-1,1]
+   //
+   // TODO: The scale factor is preliminary!
+   return 32.0 * (n0 + n1 + n2 + n3);
 }
 
 
 /** 4D simplex noise */
 double SimplexNoise(double x, double y, double z, double w)
 {
-   /* The skewing and unskewing factors are hairy again for the 4D case */
-   immutable F4 = 0.309016994;         /* F4 = (Math.sqrt(5.0)-1.0)/4.0 */
-   immutable G4 = 0.138196601;         /* G4 = (5.0-Math.sqrt(5.0))/20.0 */
+   // The skewing and unskewing factors are hairy again for the 4D case
+   enum f4 = (sqrt(5.0) - 1.0) / 4.0;
+   enum g4 = (5.0 - sqrt(5.0)) / 20.0;
 
-   double n0, n1, n2, n3, n4;    /* Noise contributions from the five corners */
+   // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
+   immutable double s = (x + y + z + w) * f4; // Factor for 4D skewing
+   immutable double xs = x + s;
+   immutable double ys = y + s;
+   immutable double zs = z + s;
+   immutable double ws = w + s;
+   immutable int i = FastFloor(xs);
+   immutable int j = FastFloor(ys);
+   immutable int k = FastFloor(zs);
+   immutable int l = FastFloor(ws);
 
-   /* Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in */
-   double s = (x + y + z + w) * F4;      /* Factor for 4D skewing */
-   double xs = x + s;
-   double ys = y + s;
-   double zs = z + s;
-   double ws = w + s;
-   int i = FastFloor(xs);
-   int j = FastFloor(ys);
-   int k = FastFloor(zs);
-   int l = FastFloor(ws);
+   immutable double t = (i + j + k + l) * g4; // Factor for 4D unskewing
 
-   double t = (i + j + k + l) * G4;      /* Factor for 4D unskewing */
-   double X0 = i - t;            /* Unskew the cell origin back to (x,y,z,w) space */
-   double Y0 = j - t;
-   double Z0 = k - t;
-   double W0 = l - t;
+   // Unskew the cell origin back to (x,y,z,w) space
+   immutable double xx0 = i - t;
+   immutable double yy0 = j - t;
+   immutable double zz0 = k - t;
+   immutable double ww0 = l - t;
 
-   double x0 = x - X0;           /* The x,y,z,w distances from the cell origin */
-   double y0 = y - Y0;
-   double z0 = z - Z0;
-   double w0 = w - W0;
+   // The x,y,z,w distances from the cell origin
+   immutable double x0 = x - xx0;
+   immutable double y0 = y - yy0;
+   immutable double z0 = z - zz0;
+   immutable double w0 = w - ww0;
 
-   /* For the 4D case, the simplex is a 4D shape I won't even try to describe.
-    * To find out which of the 24 possible simplices we're in, we need to
-    * determine the magnitude ordering of x0, y0, z0 and w0.
-    * The method below is a good way of finding the ordering of x,y,z,w and
-    * then find the correct traversal order for the simplex we're in.
-    * First, six pair-wise comparisons are performed between each possible pair
-    * of the four coordinates, and the results are used to add up binary bits
-    * for an integer index.
-    */
-   int c1 = (x0 > y0) ? 32 : 0;
-   int c2 = (x0 > z0) ? 16 : 0;
-   int c3 = (y0 > z0) ? 8 : 0;
-   int c4 = (x0 > w0) ? 4 : 0;
-   int c5 = (y0 > w0) ? 2 : 0;
-   int c6 = (z0 > w0) ? 1 : 0;
-   int c = c1 + c2 + c3 + c4 + c5 + c6;
+   // For the 4D case, the simplex is a 4D shape I won't even try to describe.
+   // To find out which of the 24 possible simplices we're in, we need to
+   // determine the magnitude ordering of x0, y0, z0 and w0.  The method below
+   // is a good way of finding the ordering of x,y,z,w and then find the correct
+   // traversal order for the simplex we're in.  First, six pair-wise
+   // comparisons are performed between each possible pair of the four
+   // coordinates, and the results are used to add up binary bits for an integer
+   // index.
+   immutable int c1 = (x0 > y0) ? 32 : 0;
+   immutable int c2 = (x0 > z0) ? 16 : 0;
+   immutable int c3 = (y0 > z0) ? 8 : 0;
+   immutable int c4 = (x0 > w0) ? 4 : 0;
+   immutable int c5 = (y0 > w0) ? 2 : 0;
+   immutable int c6 = (z0 > w0) ? 1 : 0;
+   immutable int c = c1 + c2 + c3 + c4 + c5 + c6;
 
-   int i1, j1, k1, l1;  /* The integer offsets for the second simplex corner */
-   int i2, j2, k2, l2;  /* The integer offsets for the third simplex corner */
-   int i3, j3, k3, l3;  /* The integer offsets for the fourth simplex corner */
+   // simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some order.
+   // Many values of c will never occur, since e.g. x>y>z>w makes x<z, y<w and
+   // x<w impossible. Only the 24 indices which have non-zero entries make any
+   // sense.  We use a thresholding to set the coordinates in turn from the
+   // largest magnitude.  The number 3 in the "simplex" array is at the position
+   // of the largest coordinate.
 
-   double x1, y1, z1, w1, x2, y2, z2, w2, x3, y3, z3, w3, x4, y4, z4, w4;
-   int ii, jj, kk, ll;
-   double t0, t1, t2, t3, t4;
+   // The integer offsets for the second simplex corner
+   immutable int i1 = simplex[c][0] >= 3 ? 1 : 0;
+   immutable int j1 = simplex[c][1] >= 3 ? 1 : 0;
+   immutable int k1 = simplex[c][2] >= 3 ? 1 : 0;
+   immutable int l1 = simplex[c][3] >= 3 ? 1 : 0;
 
-   /*
-    * simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some
-    * order.  Many values of c will never occur, since e.g. x>y>z>w
-    * makes x<z, y<w and x<w impossible. Only the 24 indices which
-    * have non-zero entries make any sense.  We use a thresholding to
-    * set the coordinates in turn from the largest magnitude.  The
-    * number 3 in the "simplex" array is at the position of the
-    * largest coordinate.
-    */
-   i1 = simplex[c][0] >= 3 ? 1 : 0;
-   j1 = simplex[c][1] >= 3 ? 1 : 0;
-   k1 = simplex[c][2] >= 3 ? 1 : 0;
-   l1 = simplex[c][3] >= 3 ? 1 : 0;
-   /* The number 2 in the "simplex" array is at the second largest coordinate. */
-   i2 = simplex[c][0] >= 2 ? 1 : 0;
-   j2 = simplex[c][1] >= 2 ? 1 : 0;
-   k2 = simplex[c][2] >= 2 ? 1 : 0;
-   l2 = simplex[c][3] >= 2 ? 1 : 0;
-   /* The number 1 in the "simplex" array is at the second smallest coordinate. */
-   i3 = simplex[c][0] >= 1 ? 1 : 0;
-   j3 = simplex[c][1] >= 1 ? 1 : 0;
-   k3 = simplex[c][2] >= 1 ? 1 : 0;
-   l3 = simplex[c][3] >= 1 ? 1 : 0;
-   /* The fifth corner has all coordinate offsets = 1, so no need to look that up. */
+   // The integer offsets for the third simplex corner
+   // The number 2 in the "simplex" array is at the second largest coordinate.
+   immutable int i2 = simplex[c][0] >= 2 ? 1 : 0;
+   immutable int j2 = simplex[c][1] >= 2 ? 1 : 0;
+   immutable int k2 = simplex[c][2] >= 2 ? 1 : 0;
+   immutable int l2 = simplex[c][3] >= 2 ? 1 : 0;
 
-   x1 = x0 - i1 + G4;           /* Offsets for second corner in (x,y,z,w) coords */
-   y1 = y0 - j1 + G4;
-   z1 = z0 - k1 + G4;
-   w1 = w0 - l1 + G4;
-   x2 = x0 - i2 + 2.0 * G4;    /* Offsets for third corner in (x,y,z,w) coords */
-   y2 = y0 - j2 + 2.0 * G4;
-   z2 = z0 - k2 + 2.0 * G4;
-   w2 = w0 - l2 + 2.0 * G4;
-   x3 = x0 - i3 + 3.0 * G4;    /* Offsets for fourth corner in (x,y,z,w) coords */
-   y3 = y0 - j3 + 3.0 * G4;
-   z3 = z0 - k3 + 3.0 * G4;
-   w3 = w0 - l3 + 3.0 * G4;
-   x4 = x0 - 1.0 + 4.0 * G4;  /* Offsets for last corner in (x,y,z,w) coords */
-   y4 = y0 - 1.0 + 4.0 * G4;
-   z4 = z0 - 1.0 + 4.0 * G4;
-   w4 = w0 - 1.0 + 4.0 * G4;
+   // The integer offsets for the fourth simplex corner
+   // The number 1 in the "simplex" array is at the second smallest coordinate.
+   immutable int i3 = simplex[c][0] >= 1 ? 1 : 0;
+   immutable int j3 = simplex[c][1] >= 1 ? 1 : 0;
+   immutable int k3 = simplex[c][2] >= 1 ? 1 : 0;
+   immutable int l3 = simplex[c][3] >= 1 ? 1 : 0;
 
-   /* Wrap the integer indices at 256, to avoid indexing Perm[] out of bounds */
-   ii = i % 256;
-   jj = j % 256;
-   kk = k % 256;
-   ll = l % 256;
+   // The fifth corner has all coordinate offsets = 1, so no need to look that
+   // up.
 
-   /* Calculate the contribution from the five corners */
-   t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0 - w0 * w0;
+   // Offsets for second corner in (x,y,z,w) coords
+   immutable double x1 = x0 - i1 + g4;
+   immutable double y1 = y0 - j1 + g4;
+   immutable double z1 = z0 - k1 + g4;
+   immutable double w1 = w0 - l1 + g4;
+
+   // Offsets for third corner in (x,y,z,w) coords
+   immutable double x2 = x0 - i2 + 2.0 * g4;
+   immutable double y2 = y0 - j2 + 2.0 * g4;
+   immutable double z2 = z0 - k2 + 2.0 * g4;
+   immutable double w2 = w0 - l2 + 2.0 * g4;
+
+   // Offsets for fourth corner in (x,y,z,w) coords
+   immutable double x3 = x0 - i3 + 3.0 * g4;
+   immutable double y3 = y0 - j3 + 3.0 * g4;
+   immutable double z3 = z0 - k3 + 3.0 * g4;
+   immutable double w3 = w0 - l3 + 3.0 * g4;
+
+   // Offsets for last corner in (x,y,z,w) coords
+   immutable double x4 = x0 - 1.0 + 4.0 * g4;
+   immutable double y4 = y0 - 1.0 + 4.0 * g4;
+   immutable double z4 = z0 - 1.0 + 4.0 * g4;
+   immutable double w4 = w0 - 1.0 + 4.0 * g4;
+
+   // Wrap the integer indices at 256, to avoid indexing Perm[] out of bounds
+   immutable int ii = i % 256;
+   immutable int jj = j % 256;
+   immutable int kk = k % 256;
+   immutable int ll = l % 256;
+
+   // Calculate the contribution from the five corners
+
+   // Noise contribution from the first corner
+   double n0;
+   double t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0 - w0 * w0;
    if (t0 < 0.0)
+   {
       n0 = 0.0;
-   else {
+   }
+   else
+   {
       t0 *= t0;
-      n0 =
-         t0 * t0 * Grad(Perm[ii + Perm[jj + Perm[kk + Perm[ll]]]], x0, y0,
-                         z0, w0);
+      n0 = t0
+         * t0
+         * Grad(Perm[ii + Perm[jj + Perm[kk + Perm[ll]]]], x0, y0, z0, w0);
    }
 
-   t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
+   // Noise contribution from the second corner
+   double n1;
+   double t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
    if (t1 < 0.0)
+   {
       n1 = 0.0;
-   else {
+   }
+   else
+   {
       t1 *= t1;
-      n1 =
-         t1 * t1 *
-         Grad(Perm[ii + i1 + Perm[jj + j1 + Perm[kk + k1 + Perm[ll + l1]]]],
-               x1, y1, z1, w1);
+      n1 = t1
+         * t1
+         * Grad(Perm[ii + i1 + Perm[jj + j1 + Perm[kk + k1 + Perm[ll + l1]]]],
+                x1,
+                y1,
+                z1,
+                w1);
    }
 
-   t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
+   // Noise contribution from the third corner
+   double n2;
+   double t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
    if (t2 < 0.0)
+   {
       n2 = 0.0;
-   else {
+   }
+   else
+   {
       t2 *= t2;
-      n2 =
-         t2 * t2 *
-         Grad(Perm[ii + i2 + Perm[jj + j2 + Perm[kk + k2 + Perm[ll + l2]]]],
-               x2, y2, z2, w2);
+      n2 = t2
+         * t2
+         * Grad(Perm[ii + i2 + Perm[jj + j2 + Perm[kk + k2 + Perm[ll + l2]]]],
+                x2,
+                y2,
+                z2,
+                w2);
    }
 
-   t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
+   // Noise contribution from the fourth corner
+   double n3;
+   double t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
    if (t3 < 0.0)
+   {
       n3 = 0.0;
-   else {
+   }
+   else
+   {
       t3 *= t3;
-      n3 =
-         t3 * t3 *
-         Grad(Perm[ii + i3 + Perm[jj + j3 + Perm[kk + k3 + Perm[ll + l3]]]],
-               x3, y3, z3, w3);
+      n3 = t3
+         * t3
+         * Grad(Perm[ii + i3 + Perm[jj + j3 + Perm[kk + k3 + Perm[ll + l3]]]],
+                x3,
+                y3,
+                z3,
+                w3);
    }
 
-   t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
+   // Noise contribution from the fifth corner
+   double n4;
+   double t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
    if (t4 < 0.0)
+   {
       n4 = 0.0;
-   else {
+   }
+   else
+   {
       t4 *= t4;
-      n4 =
-         t4 * t4 *
-         Grad(Perm[ii + 1 + Perm[jj + 1 + Perm[kk + 1 + Perm[ll + 1]]]], x4,
-               y4, z4, w4);
+      n4 = t4
+         * t4
+         * Grad(Perm[ii + 1 + Perm[jj + 1 + Perm[kk + 1 + Perm[ll + 1]]]],
+                x4,
+                y4,
+                z4,
+                w4);
    }
 
-   /* Sum up and scale the result to cover the range [-1,1] */
-   return 27.0 * (n0 + n1 + n2 + n3 + n4);     /* TODO: The scale factor is preliminary! */
+   // Sum up and scale the result to cover the range [-1,1]
+   //
+   // TODO: The scale factor is preliminary!
+   return 27.0 * (n0 + n1 + n2 + n3 + n4);
 }
-
-
-
