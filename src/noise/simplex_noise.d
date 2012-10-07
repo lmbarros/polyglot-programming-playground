@@ -154,7 +154,9 @@ private immutable ubyte[4][64] simplex = [
 ];
 
 
-/** 1D simplex noise */
+/**
+ * 1D simplex noise. Input in [0, 1] range, please!
+ */
 double SimplexNoise(double x)
 {
    immutable int i0 = FastFloor(x);
@@ -181,13 +183,10 @@ double SimplexNoise(double x)
    t1 *= t1;
    immutable double n1 = t1 * t1 * Grad(Perm[i1 & 0xff], x1);
 
-   // LMB: TODO: Make output (for all noise functions!) to be in the same
-   // range. They seem to like [-1, 1], but I think that I like [0, 1] better.
-   //
-   // The maximum value of this noise is 8 * (3/4)^4 = 2.53125.  A factor of
-   // 0.395 would scale to fit exactly within [-1,1], but we want to match
-   // PRMan's 1D noise, so we scale it down some more.
-   return 0.25 * (n0 + n1);
+   // LMB: Originally, this was
+   //         return 0.25 * (n0 + n1);
+   //      but I changed it to return values in the [0, 1] range.
+   return (n0 + n1 + 0.097724389) * 0.5872970198;
 }
 
 
@@ -283,12 +282,10 @@ double SimplexNoise(double x, double y)
    // Add contributions from each corner to get the final noise value.  The
    // result is scaled to return values in the interval [-1,1].
    //
-   // TODO: The scale factor is preliminary!
-   //
-   // LMB: The public domain Java implementation of Simplex Noise by Stefan
-   //      Gustavson (http://staffwww.itn.liu.se/~stegu/simplexnoise), uses 70.0
-   //      as scale.
-   return 40.0 * (n0 + n1 + n2);
+   // LMB: Used to be
+   //   return 40.0 * (n0 + n1 + n2);
+   // Changed to make output in the range [0, 1].
+   return (n0 + n1 + n2 + 0.02046459) * 24.211434;
 }
 
 
@@ -473,8 +470,10 @@ double SimplexNoise(double x, double y, double z)
    // Add contributions from each corner to get the final noise value.
    // The result is scaled to stay just inside [-1,1]
    //
-   // TODO: The scale factor is preliminary!
-   return 32.0 * (n0 + n1 + n2 + n3);
+   // LMB: Used to be
+   //         return 32.0 * (n0 + n1 + n2 + n3);
+   //      Changed to keep output in the [0, 1] range.
+   return (n0 + n1 + n2 + n3 + 0.03043628) * 16.42818417;
 }
 
 
@@ -681,6 +680,8 @@ double SimplexNoise(double x, double y, double z, double w)
 
    // Sum up and scale the result to cover the range [-1,1]
    //
-   // TODO: The scale factor is preliminary!
-   return 27.0 * (n0 + n1 + n2 + n3 + n4);
+   // LMB: Used to be
+   //         return 27.0 * (n0 + n1 + n2 + n3 + n4);
+   //      Changed in order to make the return value be in the range [0, 1]
+   return (n0 + n1 + n2 + n3 + n4 + 0.03625778) * 13.805231505;
 }
