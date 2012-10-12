@@ -155,7 +155,14 @@ private immutable ubyte[4][64] simplex = [
 
 
 /**
- * 1D simplex noise. Input in [0, 1] range, please!
+ * Computes 1D simplex noise.
+ * Parameters:
+ *    x = The coordinate from where noise will be taken. Must be in the
+ *        (int.min, int.max) range (yup, it is a floating-point number, but its
+ *        range is expressed as integers).
+ * Return: The noise at the requested coordinates. Normally, will be in the [0,
+ *         1] range, but may occasionally be slightly out of this range. Do your
+ *         own clamping if you need to be sure.
  */
 double SimplexNoise(double x)
 {
@@ -164,7 +171,6 @@ double SimplexNoise(double x)
    immutable double x0 = x - i0;
    immutable double x1 = x0 - 1.0;
    double t1 = 1.0 - x1 * x1;
-
    double t0 = 1.0 - x0 * x0;
 
    // This never happens for the 1D case
@@ -186,11 +192,22 @@ double SimplexNoise(double x)
    // LMB: Originally, this was
    //         return 0.25 * (n0 + n1);
    //      but I changed it to return values in the [0, 1] range.
-   return (n0 + n1 + 0.097724389) * 0.5872970198;
+   return (n0 + n1 + 2.5313) * 0.20367;
 }
 
 
-/** 2D simplex noise */
+/**
+ * Computes 2D simplex noise.
+ * Parameters:
+ *    x = The first coordinate from where noise will be taken. Must be in the
+ *        (int.min, int.max) range (yup, it is a floating-point number, but its
+ *        range is expressed as integers).
+ *    y = The second coordinate from where noise will be taken. Other details
+ *        are similar to the x parameter.
+ * Return: The noise at the requested coordinates. Normally, will be in the [0,
+ *         1] range, but may occasionally be slightly out of this range. Do your
+ *         own clamping if you need to be sure.
+ */
 double SimplexNoise(double x, double y)
 {
    enum f2 = 0.5 * (sqrt(3.0) - 1.0);
@@ -238,8 +255,8 @@ double SimplexNoise(double x, double y)
    immutable double y2 = y0 - 1.0 + 2.0 * g2;
 
    // Wrap the integer indices at 256, to avoid indexing Perm[] out of bounds
-   immutable int ii = i % 256;
-   immutable int jj = j % 256;
+   immutable int ii = i & 0xFF;
+   immutable int jj = j & 0xFF;
 
    // Calculate the contribution from the three corners
 
@@ -285,11 +302,24 @@ double SimplexNoise(double x, double y)
    // LMB: Used to be
    //   return 40.0 * (n0 + n1 + n2);
    // Changed to make output in the range [0, 1].
-   return (n0 + n1 + n2 + 0.02046459) * 24.211434;
+   return (n0 + n1 + n2 + 0.02213) * 22.6043;
 }
 
 
-/** 3D simplex noise */
+/**
+ * Computes 3D simplex noise.
+ * Parameters:
+ *    x = The first coordinate from where noise will be taken. Must be in the
+ *        (int.min, int.max) range (yup, it is a floating-point number, but its
+ *        range is expressed as integers).
+ *    y = The second coordinate from where noise will be taken. Other details
+ *        are similar to the x parameter.
+ *    z = The third coordinate from where noise will be taken. Other details
+ *        are similar to the x parameter.
+ * Return: The noise at the requested coordinates. Normally, will be in the [0,
+ *         1] range, but may occasionally be slightly out of this range. Do your
+ *         own clamping if you need to be sure.
+ */
 double SimplexNoise(double x, double y, double z)
 {
    // Simple skewing factors for the 3D case
@@ -410,9 +440,9 @@ double SimplexNoise(double x, double y, double z)
    immutable double z3 = z0 - 1.0 + 3.0 * g3;
 
    // Wrap the integer indices at 256 to avoid indexing Perm[] out of bounds
-   immutable int ii = i % 256;
-   immutable int jj = j % 256;
-   immutable int kk = k % 256;
+   immutable int ii = i & 0xff;
+   immutable int jj = j & 0xff;
+   immutable int kk = k & 0xff;
 
    // Calculate the contribution from the four corners
 
@@ -473,11 +503,26 @@ double SimplexNoise(double x, double y, double z)
    // LMB: Used to be
    //         return 32.0 * (n0 + n1 + n2 + n3);
    //      Changed to keep output in the [0, 1] range.
-   return (n0 + n1 + n2 + n3 + 0.03043628) * 16.42818417;
+   return (n0 + n1 + n2 + n3 + 0.03059) * 16.3493;
 }
 
 
-/** 4D simplex noise */
+/**
+ * Computes 4D simplex noise.
+ * Parameters:
+ *    x = The first coordinate from where noise will be taken. Must be in the
+ *        (int.min, int.max) range (yup, it is a floating-point number, but its
+ *        range is expressed as integers).
+ *    y = The second coordinate from where noise will be taken. Other details
+ *        are similar to the x parameter.
+ *    z = The third coordinate from where noise will be taken. Other details
+ *        are similar to the x parameter.
+ *    w = The fourth coordinate from where noise will be taken. Other details
+ *        are similar to the x parameter.
+ * Return: The noise at the requested coordinates. Normally, will be in the [0,
+ *         1] range, but may occasionally be slightly out of this range. Do your
+ *         own clamping if you need to be sure.
+ */
 double SimplexNoise(double x, double y, double z, double w)
 {
    // The skewing and unskewing factors are hairy again for the 4D case
@@ -580,10 +625,10 @@ double SimplexNoise(double x, double y, double z, double w)
    immutable double w4 = w0 - 1.0 + 4.0 * g4;
 
    // Wrap the integer indices at 256, to avoid indexing Perm[] out of bounds
-   immutable int ii = i % 256;
-   immutable int jj = j % 256;
-   immutable int kk = k % 256;
-   immutable int ll = l % 256;
+   immutable int ii = i & 0xFF;
+   immutable int jj = j & 0xFF;
+   immutable int kk = k & 0xFF;
+   immutable int ll = l & 0xFF;
 
    // Calculate the contribution from the five corners
 
@@ -683,5 +728,5 @@ double SimplexNoise(double x, double y, double z, double w)
    // LMB: Used to be
    //         return 27.0 * (n0 + n1 + n2 + n3 + n4);
    //      Changed in order to make the return value be in the range [0, 1]
-   return (n0 + n1 + n2 + n3 + n4 + 0.03625778) * 13.805231505;
+   return (n0 + n1 + n2 + n3 + n4 + 0.03669) * 13.6335;
 }
