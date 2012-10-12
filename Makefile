@@ -2,7 +2,7 @@
 # Not exactly an award-wining build system, but should work for now
 #
 
-all: simplex_noise_demo benchmark
+all: simplex_noise_demo
 
 #DMDFLAGS=-unittest
 DMDFLAGS=-O -inline
@@ -31,18 +31,7 @@ simplex_noise_demo: $(TERRAIN_OBJECTS) $(SIMPLEX_NOISE_DEMO_OBJECTS)
 		-lDerelictSFML2 -lDerelictUtil -lphobos2
 
 #
-# The benchmark
-#
-BENCHMARK_OBJECTS=\
-	src/benchmark.o
-
-benchmark: $(TERRAIN_OBJECTS) $(BENCHMARK_OBJECTS)
-	gcc -o benchmark $^  -lcsfml-window -lcsfml-graphics \
-		-lDerelictSFML2 -lDerelictUtil -lphobos2
-
-#
 # Clean
 #
 clean:
-	rm -f $(TERRAIN_OBJECTS) $(SIMPLEX_NOISE_DEMO_OBJECTS) simplex_noise_demo \
-	   benchmark
+	rm -f $(TERRAIN_OBJECTS) $(SIMPLEX_NOISE_DEMO_OBJECTS) simplex_noise_demo
