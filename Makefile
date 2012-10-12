@@ -2,11 +2,11 @@
 # Not exactly an award-wining build system, but should work for now
 #
 
-all: demo benchmark
+all: simplex_noise_demo benchmark
 
 #DMDFLAGS=-unittest
 DMDFLAGS=-O -inline
-
+#DMDFLAGS=-debug
 
 #
 # Implicit rules
@@ -21,13 +21,13 @@ TERRAIN_OBJECTS=\
 	src/noise/simplex_noise.o
 
 #
-# The demo
+# The Simplex Noise Demo
 #
-DEMO_OBJECTS=\
-	src/demo.o
+SIMPLEX_NOISE_DEMO_OBJECTS=\
+	src/simplex_noise_demo.o
 
-demo: $(TERRAIN_OBJECTS) $(DEMO_OBJECTS)
-	gcc -o demo $^ -lcsfml-window -lcsfml-graphics \
+simplex_noise_demo: $(TERRAIN_OBJECTS) $(SIMPLEX_NOISE_DEMO_OBJECTS)
+	gcc -o simplex_noise_demo $^ -lcsfml-window -lcsfml-graphics \
 		-lDerelictSFML2 -lDerelictUtil -lphobos2
 
 #
@@ -44,4 +44,5 @@ benchmark: $(TERRAIN_OBJECTS) $(BENCHMARK_OBJECTS)
 # Clean
 #
 clean:
-	rm -f $(TERRAIN_OBJECTS) $(DEMO_OBJECTS) $(BENCHMARK_OBJECTS) demo benchmark
+	rm -f $(TERRAIN_OBJECTS) $(SIMPLEX_NOISE_DEMO_OBJECTS) simplex_noise_demo \
+	   benchmark
