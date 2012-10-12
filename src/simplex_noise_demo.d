@@ -30,7 +30,7 @@ static this()
    DerelictSFML2Graphics.load();
    DerelictSFML2Window.load();
 
-   SNG = new SimplexNoiseGenerator();
+   SNG = new SimplexNoiseGenerator(SimplexNoiseGenerator.InitScheme.ORIGINAL);
 }
 
 
@@ -123,6 +123,12 @@ void HandleKeyPress(sfEvent event)
       case sfKeyF4:
          Dimensions = 4;
          writeln("4D noise");
+         break;
+
+      case sfKeyF5:
+         SNG = new SimplexNoiseGenerator(
+            SimplexNoiseGenerator.InitScheme.RANDOM);
+         writeln("Regenerated the noise generator");
          break;
 
       case sfKeyNum1:

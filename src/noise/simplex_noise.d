@@ -18,6 +18,70 @@ import std.math;
  */
 class SimplexNoiseGenerator
 {
+   public enum InitScheme
+   {
+      ORIGINAL,
+      RANDOM,
+      INCONSISTENTLY_RANDOM,
+      CONSTANT
+   }
+
+   /**
+    * Constructs the SimplexNoiseGenerator, initializing its permutation table
+    * with the values used in the original C implementation by Stefan
+    * Gustavson.
+    */
+   this(InitScheme permInitScheme = InitScheme.ORIGINAL, int param = -1)
+   {
+      import std.random;
+
+      final switch(permInitScheme)
+      {
+         case InitScheme.ORIGINAL:
+         {
+            perm_ = gustavsonsPermutationTable_;
+            break;
+         }
+
+         case InitScheme.RANDOM:
+         {
+            Mt19937 gen;
+            gen.seed(param < 0 ? unpredictableSeed : param);
+
+            int[] missing = new int[256];
+            foreach(i; 0..256)
+               missing[i] = i;
+
+            foreach(i; 0..256)
+            {
+               immutable auto r = uniform(0, missing.length, gen);
+               immutable auto n = cast(ubyte)missing[r];
+               perm_[i] = perm_[i+256] = n;
+               missing = missing[0..r] ~ missing[r+1..$];
+            }
+
+            break;
+         }
+
+         case InitScheme.INCONSISTENTLY_RANDOM:
+         {
+            Mt19937 gen;
+            gen.seed(param < 0 ? unpredictableSeed : param);
+            foreach(i; 0..256)
+               perm_[i] = perm_[i+256] =
+                  uniform(cast(ubyte)0, cast(ubyte)255, gen);
+            break;
+         }
+
+         case InitScheme.CONSTANT:
+         {
+            foreach(i; 0..512)
+               perm_[i] = cast(ubyte)param;
+            break;
+         }
+      }
+   }
+
    /**
     * Computes 1D simplex noise.
     * Parameters:
@@ -803,7 +867,7 @@ class SimplexNoiseGenerator
     * functions.  A vector-valued noise over 3D accesses it 96 times, and a
     * float-valued 4D noise 64 times. We want this to fit in the cache!
     */
-   private ubyte[512] perm_ = gustavsonsPermutationTable_;
+   private ubyte[512] perm_;
 
    /**
     * These are the permutation table values as used in Stefan Gustavson's
