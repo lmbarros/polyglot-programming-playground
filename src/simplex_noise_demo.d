@@ -10,6 +10,8 @@ import std.algorithm;
 import std.exception;
 import std.stdio;
 
+
+SimplexNoiseGenerator SNG;
 sfImage* Image;
 
 enum Width = 400;
@@ -27,6 +29,8 @@ static this()
 {
    DerelictSFML2Graphics.load();
    DerelictSFML2Window.load();
+
+   SNG = new SimplexNoiseGenerator();
 }
 
 
@@ -44,19 +48,19 @@ void RedrawImage()
          switch(Dimensions)
          {
             case 1:
-               noise = cast(ubyte)(SimplexNoise(ii) * 255);
+               noise = cast(ubyte)(SNG.noise(ii) * 255);
                break;
 
             case 2:
-               noise = cast(ubyte)(SimplexNoise(ii, jj) * 255);
+               noise = cast(ubyte)(SNG.noise(ii, jj) * 255);
                break;
 
             case 3:
-               noise = cast(ubyte)(SimplexNoise(ii, jj, TheZ) * 255);
+               noise = cast(ubyte)(SNG.noise(ii, jj, TheZ) * 255);
                break;
 
             case 4:
-               noise = cast(ubyte)(SimplexNoise(ii, jj, TheZ, TheW) * 255);
+               noise = cast(ubyte)(SNG.noise(ii, jj, TheZ, TheW) * 255);
                break;
 
             default:
