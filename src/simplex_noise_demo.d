@@ -4,7 +4,7 @@
 
 import derelict.sfml2.graphics;
 import derelict.sfml2.window;
-import noise.simplex_noise;
+import syagrus.noise.simplex_noise;
 import std.c.stdlib;
 import std.algorithm;
 import std.exception;

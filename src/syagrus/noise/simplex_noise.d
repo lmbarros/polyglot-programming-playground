@@ -10,6 +10,8 @@
  * http://staffwww.itn.liu.se/~stegu/simplexnoise
  */
 
+module syagrus.noise.simplex_noise;
+
 import std.math;
 
 /**
@@ -18,24 +20,62 @@ import std.math;
  */
 class SimplexNoiseGenerator
 {
+   /**
+    * The possible ways to initialize a SimplexNoiseGenerator. Specifically,
+    * this relates to how the permutation table is initialized.
+    */
    public enum InitScheme
    {
+      /**
+       * Uses the values used in the original C implementation by Stefan
+       * Gustavson. The param parameter passed to the constructor is ignored.
+       */
       ORIGINAL,
+
+      /**
+       * Randomizes the permutation table, in a way that, to the best of my
+       * knowledge, respects the restrictions mentioned in the comments in the
+       * original C implementation by Stefan Gustavson.  The param parameter
+       * passed to the constructor will be used to seed the random number
+       * generator used to randomize the table. If param is less than zero, than
+       * the random number generator will be randomly initialized.
+       */
       RANDOM,
+
+      /**
+       * Randomizes the permutation table completely, disrespecting the
+       * restrictions mentioned in the comments in the original C implementation
+       * by Stefan Gustavson.  The param parameter passed to the constructor
+       * will be used to seed the random number generator used to randomize the
+       * table. If param is less than zero, than the random number generator
+       * will be randomly initialized.
+       */
       INCONSISTENTLY_RANDOM,
+
+      /**
+       * Initializes all the entries in the permutation table to a constant
+       * value (which is passed as the param parameter passed to the
+       * constructor). Don't expect a nice-looking noise when using this kind of
+       * initialization.
+       */
       CONSTANT
    }
 
    /**
-    * Constructs the SimplexNoiseGenerator, initializing its permutation table
-    * with the values used in the original C implementation by Stefan
-    * Gustavson.
+    * Constructs the SimplexNoiseGenerator,
+    *
+    * Parameters:
+    *    initScheme = The scheme used to initialize the permutation table used
+    *       internally.
+    *    param = An additional parameter, whose meaning varies with the
+    *       initScheme used. Please see the documentation of the InitScheme
+    *       entries to know what to pass here.
     */
-   this(InitScheme permInitScheme = InitScheme.ORIGINAL, int param = -1)
+   this(InitScheme initScheme = InitScheme.ORIGINAL, int param = -1)
    {
       import std.random;
 
-      final switch(permInitScheme)
+      final switch(initScheme)
       {
          case InitScheme.ORIGINAL:
          {

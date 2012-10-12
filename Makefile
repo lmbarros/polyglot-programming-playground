@@ -18,7 +18,7 @@ DMDFLAGS=-O -inline
 # Terrain
 #
 TERRAIN_OBJECTS=\
-	src/noise/simplex_noise.o
+	src/syagrus/noise/simplex_noise.o
 
 #
 # The Simplex Noise Demo
