@@ -1,5 +1,5 @@
 /**
- * Fractional Browning Noise Demo
+ * Fractional Brownian Noise Demo
  */
 
 import derelict.sfml2.graphics;
@@ -48,7 +48,7 @@ void RedrawImage()
    double min = double.max;
    double max = -double.max;
 
-   double[Width][Height] realImage;
+   double[Height][Width] realImage;
 
    // Create the image with real numbers
    foreach(i; 0 .. Width)
