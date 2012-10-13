@@ -8,6 +8,7 @@ import syagrus.noise.simplex_noise;
 import syagrus.noise.fractional_brownian_motion;
 import std.c.stdlib;
 import std.algorithm;
+import std.conv;
 import std.exception;
 import std.stdio;
 
@@ -18,11 +19,12 @@ sfImage* Image;
 enum Width = 600;
 enum Height = 400;
 
-uint Octaves = 2;
-double Frequency = 1.0;
+uint Octaves = 6;
+double Frequency = 1.5;
 double Amplitude = 1.0;
 double Lacunarity = 2.0;
-double Gain = 0.5;
+double Gain = 0.75;
+double SeaLevel = 0.65;
 
 
 static this()
@@ -36,8 +38,68 @@ static this()
 
 sfColor GetColor(double height)
 {
+   struct hc // height & color
+   {
+      double height;
+      sfColor color;
+   }
+
+   immutable hc[] hcs = [
+      { 0.0, sfColor(10, 200, 50, 255) },   // light green
+      { 0.35, sfColor(8, 150, 40, 255) },   // dark green
+      { 0.5, sfColor(255, 240, 25, 255) },  // yellow
+      { 0.65, sfColor(133, 94, 43, 255) },  // brown
+      { 0.9, sfColor(166, 120, 60, 255) },  // still brown
+      { 1.0, sfColor(220, 220, 220, 255) }, // light gray
+      ];
+
+   sfColor mix(const ref sfColor c1, const ref sfColor c2, double ratio)
+   in
+   {
+      assert(ratio >= 0.0, "ratio out of range: " ~ to!string(ratio));
+      assert(ratio <= 1.0, "ratio out of range: " ~ to!string(ratio));
+   }
+   body
+   {
+      immutable w1 = ratio;
+      immutable w2 = 1.0 - ratio;
+      return sfColor(cast(ubyte)(c1.r * w1 + c2.r * w2),
+                     cast(ubyte)(c1.g * w1 + c2.g * w2),
+                     cast(ubyte)(c1.b * w1 + c2.b * w2),
+                     cast(ubyte)(c1.a * w1 + c2.a * w2));
+   }
+
    immutable ubyte noise = cast(ubyte)(height * 255);
-   return sfColor(noise/2, noise, noise/2, 255);
+
+   if (height < SeaLevel)
+   {
+      immutable deepWater = sfColor(10, 20, 125, 255);
+      immutable shallowWater = sfColor(30, 50, 200, 255);
+      immutable r = height / SeaLevel;
+      return mix(shallowWater, deepWater, r);
+   }
+
+   immutable aslHeight = (height - SeaLevel) / (1.0 - SeaLevel);
+
+   size_t largerIndex;
+   foreach(i, e; hcs)
+   {
+      if (e.height == aslHeight)
+      {
+         return e.color;
+      }
+      else if (e.height > aslHeight)
+      {
+         largerIndex = i;
+         break;
+      }
+   }
+
+   auto sh = hcs[largerIndex - 1].height; // small height
+   auto lh = hcs[largerIndex].height;     // large height
+   auto r = (aslHeight - sh) / (lh - sh);
+
+   return mix(hcs[largerIndex].color, hcs[largerIndex - 1].color, r);
 }
 
 
@@ -229,6 +291,16 @@ void HandleKeyPress(sfEvent event)
       case sfKeyT:
          decVar(Gain);
          writefln("Gain = %s", Gain);
+         break;
+
+      case sfKeyNum6:
+         incVar(SeaLevel);
+         writefln("SeaLevel = %s", SeaLevel);
+         break;
+
+      case sfKeyY:
+         decVar(SeaLevel);
+         writefln("SeaLevel = %s", SeaLevel);
          break;
 
       default:

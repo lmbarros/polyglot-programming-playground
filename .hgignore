@@ -3,3 +3,4 @@ syntax: glob
 *.o
 fractional_brownian_motion_demo
 simplex_noise_demo
+terrain_demo
