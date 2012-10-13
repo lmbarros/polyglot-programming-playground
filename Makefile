@@ -2,7 +2,7 @@
 # Not exactly an award-wining build system, but should work for now
 #
 
-all: simplex_noise_demo fractional_brownian_motion_demo
+all: simplex_noise_demo fractional_brownian_motion_demo terrain_demo
 
 #DMDFLAGS=-unittest
 DMDFLAGS=-O -inline
@@ -43,8 +43,19 @@ fractional_brownian_motion_demo: $(TERRAIN_OBJECTS) $(FBM_DEMO_OBJECTS)
 		-lDerelictSFML2 -lDerelictUtil -lphobos2
 
 #
+# The Terrain Demo
+#
+TERRAIN_DEMO_OBJECTS=\
+	src/terrain_demo.o
+
+terrain_demo: $(TERRAIN_OBJECTS) $(TERRAIN_DEMO_OBJECTS)
+	gcc -o terrain_demo $^ -lcsfml-window -lcsfml-graphics \
+		-lDerelictSFML2 -lDerelictUtil -lphobos2
+
+#
 # Clean
 #
 clean:
 	rm -f $(TERRAIN_OBJECTS) $(SIMPLEX_NOISE_DEMO_OBJECTS) $(FBM_DEMO_OBJECTS) \
-	   simplex_noise_demo fractional_brownian_motion_demo
+	   $(TERRAIN_DEMO_OBJECTS) simplex_noise_demo \
+	   fractional_brownian_motion_demo terrain_demo
