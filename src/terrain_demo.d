@@ -10,21 +10,22 @@ import std.c.stdlib;
 import std.algorithm;
 import std.conv;
 import std.exception;
+import std.math;
 import std.stdio;
 
 
 SimplexNoiseGenerator SNG;
 sfImage* Image;
 
-enum Width = 600;
-enum Height = 400;
+enum Width = 965;
+enum Height = 600;
 
-uint Octaves = 6;
+uint Octaves = 8;
 double Frequency = 1.5;
 double Amplitude = 1.0;
-double Lacunarity = 2.0;
+double Lacunarity = 1.5;
 double Gain = 0.75;
-double SeaLevel = 0.65;
+double SeaLevel = 0.75;
 
 
 static this()
@@ -103,10 +104,20 @@ sfColor GetColor(double height)
 }
 
 
+void GetCirclePoint(
+   double cx, double cy, double radius, double t, out double x, out double y)
+{
+   t *= 2 * PI;
+
+   x = cx + radius * cos(t);
+   y = cy + radius * sin(t);
+}
+
+
 void RedrawImage()
 {
-   auto fbm = new FractionalBrownianMotionGenerator(
-      delegate(x, y) { return SNG.noise(x, y); },
+   auto fbm = MakeFBMFunc(
+      delegate(x, y, z) { return SNG.noise(x, y, z); },
       Octaves,
       Frequency,
       Amplitude,
@@ -126,7 +137,19 @@ void RedrawImage()
          immutable double ii = cast(double)(i) / Width;
          immutable double jj = cast(double)(j) / Height;
 
-         immutable noise = fbm.noise(ii, jj);
+         immutable cx = 0.0;
+         immutable cy = 0.0;
+         immutable radius = 0.42;
+         immutable t = ii;
+         double texX;
+         double texY;
+
+         // The idea of sampling a cylinder to get a tile-able 2D texture came
+         // from an article by Joshua Tippetts (he samples a 4D noise function
+         // to create 2D noise tile-able in both axes, but the idea is the
+         // same): http://www.gamedev.net/blog/33/entry-2138456-seamless-noise
+         GetCirclePoint(cx, cy, radius, t, texX, texY);
+         immutable noise = fbm(texX, texY, jj);
 
          if (noise < min)
             min = noise;

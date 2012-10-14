@@ -36,14 +36,13 @@ static this()
 
 void RedrawImage()
 {
-   auto fbm = new FractionalBrownianMotionGenerator(
+   auto fbm = MakeFBMFunc(
       delegate(x, y) { return SNG.noise(x, y); },
       Octaves,
       Frequency,
       Amplitude,
       Lacunarity,
       Gain);
-
 
    double min = double.max;
    double max = -double.max;
@@ -58,7 +57,7 @@ void RedrawImage()
          immutable double ii = cast(double)(i) / Width;
          immutable double jj = cast(double)(j) / Height;
 
-         immutable noise = fbm.noise(ii, jj);
+         immutable noise = fbm(ii, jj);
 
          if (noise < min)
             min = noise;
