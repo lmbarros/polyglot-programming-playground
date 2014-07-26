@@ -1,6 +1,9 @@
-syntax: glob
+syntax: regexp
 
-*.o
-fractional_brownian_motion_demo
-simplex_noise_demo
-terrain_demo
+
+\.o$
+^Continuous_Terrain_Generation_in_D/fractional_brownian_motion_demo$
+^Continuous_Terrain_Generation_in_D/simplex_noise_demo$
+^Continuous_Terrain_Generation_in_D/terrain_demo$
+^Starting_with_OpenGL_in_D/DOGL$
+\.dub$
