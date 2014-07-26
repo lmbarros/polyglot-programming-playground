@@ -1,0 +1,15 @@
+{
+   "name": "dopengl",
+   "description": "Experimenting with OpenGL and D",
+   "authors": ["Leandro Motta Barros"],
+   "license": "Proprietary",
+
+   "targetType": "executable",
+   "targetName": "DOGL",
+
+    "dependencies":
+    {
+        "derelict-sdl2":"~>1.0.0",
+        "derelict-gl3":"~master",
+    }
+}
