@@ -20,11 +20,12 @@ void initializeProgram()
 
 void initializeVertexBuffer()
 {
-   glGenBuffers(1, &positionBufferObject);
+   positionBufferObject.init();
+   positionBufferObject.bind();
 
-   glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
    glBufferData(GL_ARRAY_BUFFER, vertexPositions.sizeof, vertexPositions.ptr, GL_STATIC_DRAW);
-   glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+   positionBufferObject.unbind();
 }
 
 
@@ -62,7 +63,7 @@ SDL_Window* theWindow;
 SDL_GLContext theContext;
 Program theProgram;
 
-GLuint positionBufferObject;
+VertexBufferObject positionBufferObject;
 GLuint vao;
 
 enum SCREEN_WIDTH = 1024;
@@ -144,7 +145,7 @@ void main()
 
       theProgram.use();
 
-      glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+      positionBufferObject.bind();
       glEnableVertexAttribArray(0);
       glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, null);
 
