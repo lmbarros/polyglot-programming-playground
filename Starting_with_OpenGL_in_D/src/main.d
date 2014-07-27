@@ -3,125 +3,64 @@ import std.string;
 import derelict.sdl2.sdl;
 import derelict.opengl3.gl3;
 
+import dogl;
 
-GLuint createShader(GLenum shaderType, string shaderSource)
-{
-	GLuint shader = glCreateShader(shaderType);
-   const char* strFileData = shaderSource.toStringz;
-	glShaderSource(shader, 1, &strFileData, null); // shader is an array of 1 string...
-
-	glCompileShader(shader);
-
-	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if (status == GL_FALSE)
-	{
-		GLint infoLogLength;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-		GLchar[] strInfoLog = new GLchar[infoLogLength + 1];
-		glGetShaderInfoLog(shader, infoLogLength, null, strInfoLog.ptr);
-
-		string strShaderType;
-		switch (shaderType)
-		{
-         case GL_VERTEX_SHADER: strShaderType = "vertex"; break;
-         case GL_GEOMETRY_SHADER: strShaderType = "geometry"; break;
-         case GL_FRAGMENT_SHADER: strShaderType = "fragment"; break;
-         default: strShaderType = "unknown";
-		}
-
-		writefln("Compile failure in %s shader:\n%s\n", strShaderType, strInfoLog);
-	}
-
-	return shader;
-}
-
-
-GLuint createProgram(in GLuint[] shaderList)
-{
-	GLuint program = glCreateProgram();
-
-	foreach (shader; shaderList)
-		glAttachShader(program, shader);
-
-	glLinkProgram(program);
-
-	GLint status;
-	glGetProgramiv(program, GL_LINK_STATUS, &status);
-	if (status == GL_FALSE)
-	{
-		GLint infoLogLength;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-		GLchar[] strInfoLog = new GLchar[infoLogLength + 1];
-		glGetProgramInfoLog(program, infoLogLength, null, strInfoLog.ptr);
-		writefln("Linker failure: %s\n", strInfoLog);
-	}
-
-	foreach (shader; shaderList)
-		glDetachShader(program, shader);
-
-	return program;
-}
 
 void initializeProgram()
 {
-	GLuint[] shaderList;
+   Shader vertexShader;
+   Shader fragmentShader;
 
-	shaderList ~= createShader(GL_VERTEX_SHADER, strVertexShader);
-	shaderList ~= createShader(GL_FRAGMENT_SHADER, strFragmentShader);
+   vertexShader.init(GL_VERTEX_SHADER, strVertexShader);
+   fragmentShader.init(GL_FRAGMENT_SHADER, strFragmentShader);
 
-	theProgram = createProgram(shaderList);
-
-   foreach (shader; shaderList)
-      glDeleteShader(shader);
+   theProgram.init(vertexShader, fragmentShader);
 }
 
 
 void initializeVertexBuffer()
 {
-	glGenBuffers(1, &positionBufferObject);
+   glGenBuffers(1, &positionBufferObject);
 
-	glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
-	glBufferData(GL_ARRAY_BUFFER, vertexPositions.sizeof, vertexPositions.ptr, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+   glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
+   glBufferData(GL_ARRAY_BUFFER, vertexPositions.sizeof, vertexPositions.ptr, GL_STATIC_DRAW);
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 
 void init()
 {
-	initializeProgram();
-	initializeVertexBuffer();
+   initializeProgram();
+   initializeVertexBuffer();
 
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+   glGenVertexArrays(1, &vao);
+   glBindVertexArray(vao);
 }
 
 
 
 immutable string strVertexShader = `
-	#version 330
-	layout(location = 0) in vec4 position;
-	void main()
-	{
-	   gl_Position = position;
-	}
+   #version 330
+   layout(location = 0) in vec4 position;
+   void main()
+   {
+      gl_Position = position;
+   }
 `;
 
 immutable string strFragmentShader = `
-	#version 330
-	out vec4 outputColor;
-	void main()
-	{
-	   outputColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	}
+   #version 330
+   out vec4 outputColor;
+   void main()
+   {
+      outputColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+   }
 `;
 
 
 SDL_Window* theWindow;
 SDL_GLContext theContext;
-GLuint theProgram;
+Program theProgram;
 
 GLuint positionBufferObject;
 GLuint vao;
@@ -130,9 +69,9 @@ enum SCREEN_WIDTH = 1024;
 enum SCREEN_HEIGHT = 768;
 
 immutable float[12] vertexPositions = [
-	0.75f, 0.75f, 0.0f, 1.0f,
-	0.75f, -0.75f, 0.0f, 1.0f,
-	-0.75f, -0.75f, 0.0f, 1.0f,
+   0.75f, 0.75f, 0.0f, 1.0f,
+   0.75f, -0.75f, 0.0f, 1.0f,
+   -0.75f, -0.75f, 0.0f, 1.0f,
 ];
 
 
@@ -203,7 +142,7 @@ void main()
       glClearColor(0.0, 0.4, 0.3, 0.0);
       glClear(GL_COLOR_BUFFER_BIT);
 
-      glUseProgram(theProgram);
+      theProgram.use();
 
       glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
       glEnableVertexAttribArray(0);
@@ -212,7 +151,7 @@ void main()
       glDrawArrays(GL_TRIANGLES, 0, 3);
 
       glDisableVertexAttribArray(0);
-      glUseProgram(0);
+      theProgram.unuse();
 
       SDL_GL_SwapWindow(theWindow);
    }
