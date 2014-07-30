@@ -1,4 +1,8 @@
-// Quick and dirty D OpenGL bindings
+/**
+ * Quick and dirty (but improving!) OpenGL bindings for D.
+ *
+ * Author: Leandro Motta Barros
+ */
 
 module dogl;
 
@@ -7,67 +11,109 @@ import std.c.stdlib;
 import derelict.opengl3.gl3;
 
 
-public struct VertexBufferObject
+/**
+ * Boilerplate code for reference-counted OpenGL objects.
+ *
+ * This shall be mixed into the OpenGL object wrapper $(D struct)s. These $(D
+ * struct)s shall call the $(D initRefCount()) method upon initialization and
+ * they also should implement a $(D freeResources()) method, which the
+ * boilerplate code will call when the last reference to the object is gone.
+ */
+mixin template RefCountedBoilerplate()
 {
-   private struct Impl
+   /// Pointer to the reference count.
+   private int* refCount;
+
+   /// Allocates memory for the reference counter, sets it to one.
+   private void initRefCount()
    {
-      private GLuint buffer = 0;
-      private int refCount = 0;
+      refCount = cast(int*)malloc(typeof(*refCount).sizeof);
+      *refCount = 1;
    }
 
-   private Impl* _data = null;
-
-   public void init()
+   /// Is this object's reference counter initialized?
+   private @property bool isRefCountInited()
    {
-      _data = cast(Impl*)malloc(Impl.sizeof);
-      _data.refCount = 1;
-      glGenBuffers(1, &_data.buffer);
+      return refCount !is null;
    }
 
-   public this(this)
-   {
-      if (_data is null)
-         return;
-      ++_data.refCount;
-   }
-
+   /**
+    * Decrements the reference counter; if it reaches zero, frees the reference
+    * counter memory and calls $(D freeResources()).
+    */
    public ~this()
    {
-      if (_data is null)
+      if (!isRefCountInited)
          return;
 
-      --_data.refCount;
+      --(*refCount);
 
-      if (_data.refCount == 0)
+      if (*refCount == 0)
       {
-         // glDeleteBuffers() unbinds the buffer object if it is bound
-         glDeleteBuffers(1, &_data.buffer);
-
-         free(_data);
+         freeResources();
+         free(refCount);
       }
    }
 
-
-   public void bind()
+   /// Increments the reference counter.
+   public this(this)
    in
    {
-      assert(_data !is null);
+      assert(isRefCountInited,
+             "Cannot copy uninitialized reference-counted objects");
    }
    body
    {
-      glBindBuffer(GL_ARRAY_BUFFER, _data.buffer);
+      ++(*refCount);
+   }
+}
+
+
+/// A Vertex Buffer Object, AKA VBO.
+public struct VertexBufferObject
+{
+   mixin RefCountedBoilerplate;
+
+   /// The buffer object itself, as OpenGL sees it.
+   private GLuint buffer = 0;
+
+   /// Initializes the object.
+   public void init()
+   {
+      initRefCount();
+      glGenBuffers(1, &buffer);
    }
 
+   /// Frees the object.
+   private void freeResources()
+   {
+      glDeleteBuffers(1, &buffer);
+   }
+
+   /// Binds the object to $(D GL_ARRAY_BUFFER).
+   public void bind()
+   in
+   {
+      assert(isRefCountInited);
+   }
+   body
+   {
+      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+   }
+
+   /// Unbinds the object, leaving $(D GL_ARRAY_BUFFER) unbound.
    public void unbind()
    in
    {
-      assert(_data !is null);
+      assert(isRefCountInited);
    }
    body
    {
       glBindBuffer(GL_ARRAY_BUFFER, 0);
    }
 }
+
+
 
 
 public struct Shader
