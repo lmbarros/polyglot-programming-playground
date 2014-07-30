@@ -115,37 +115,35 @@ public struct VertexBufferObject
 
 
 
-
+/**
+ * A Shader.
+ */
 public struct Shader
 {
-   private struct Impl
-   {
-      private GLuint shader = 0;
-      private int refCount = 0;
-   }
+   mixin RefCountedBoilerplate;
 
-   private Impl* _data = null;
+   /// The shader object itself, as OpenGL sees it.
+   private GLuint shader = 0;
 
    public void init(GLenum shaderType, string shaderText)
    {
-      _data = cast(Impl*)malloc(Impl.sizeof);
-      _data.refCount = 1;
+      initRefCount();
 
-      _data.shader = glCreateShader(shaderType);
+      shader = glCreateShader(shaderType);
       const st = shaderText.toStringz;
-      glShaderSource(_data.shader, 1, &st, null);
-      glCompileShader(_data.shader);
+      glShaderSource(shader, 1, &st, null);
+      glCompileShader(shader);
 
       GLint status;
-      glGetShaderiv(_data.shader, GL_COMPILE_STATUS, &status);
+      glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 
       if (status == GL_FALSE)
       {
          GLint infoLogLength;
-         glGetShaderiv(_data.shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
 
          GLchar[] strInfoLog = new GLchar[infoLogLength + 1];
-         glGetShaderInfoLog(_data.shader, infoLogLength, null, strInfoLog.ptr);
+         glGetShaderInfoLog(shader, infoLogLength, null, strInfoLog.ptr);
 
          string strShaderType;
          switch (shaderType)
@@ -169,25 +167,9 @@ public struct Shader
 
    }
 
-   public this(this)
+   private void freeResources()
    {
-      if (_data is null)
-         return;
-      ++_data.refCount;
-   }
-
-   public ~this()
-   {
-      if (_data is null)
-         return;
-
-      --_data.refCount;
-
-      if (_data.refCount == 0)
-      {
-         glDeleteShader(_data.shader);
-         free(_data);
-      }
+      glDeleteShader(shader);
    }
 }
 
@@ -195,13 +177,9 @@ public struct Shader
 
 public struct Program
 {
-   private struct Impl
-   {
-      private GLuint program = 0;
-      private int refCount = 0;
-   }
+   mixin RefCountedBoilerplate;
 
-   private Impl* _data = null;
+   private GLuint program = 0;
 
    public void init(Shader[] shaders...)
    in
@@ -210,68 +188,49 @@ public struct Program
    }
    body
    {
-      _data = cast(Impl*)malloc(Impl.sizeof);
-      _data.refCount = 1;
-
-      _data.program = glCreateProgram();
+      initRefCount();
+      program = glCreateProgram();
 
       foreach (shader; shaders)
-         glAttachShader(_data.program, shader._data.shader);
+         glAttachShader(program, shader.shader);
 
-      glLinkProgram(_data.program);
+      glLinkProgram(program);
 
       GLint status;
-      glGetProgramiv(_data.program, GL_LINK_STATUS, &status);
+      glGetProgramiv(program, GL_LINK_STATUS, &status);
       if (status == GL_FALSE)
       {
          GLint infoLogLength;
-         glGetProgramiv(_data.program, GL_INFO_LOG_LENGTH, &infoLogLength);
+         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
 
          GLchar[] strInfoLog = new GLchar[infoLogLength + 1];
-         glGetProgramInfoLog(_data.program, infoLogLength,
-                             null, strInfoLog.ptr);
+         glGetProgramInfoLog(program, infoLogLength, null, strInfoLog.ptr);
          throw new Exception(format("Shader linker error: %s", strInfoLog));
       }
 
       foreach (shader; shaders)
-         glDetachShader(_data.program, shader._data.shader);
+         glDetachShader(program, shader.shader);
    }
 
-   public this(this)
+   private void freeResources()
    {
-      if (_data is null)
-         return;
-      ++_data.refCount;
-   }
-
-   public ~this()
-   {
-      if (_data is null)
-         return;
-
-      --_data.refCount;
-
-      if (_data.refCount == 0)
-      {
-         glDeleteProgram(_data.program);
-         free(_data);
-      }
+      glDeleteProgram(program);
    }
 
    public void use()
    in
    {
-      assert(_data !is null);
+      assert(isRefCountInited);
    }
    body
    {
-      glUseProgram(_data.program);
+      glUseProgram(program);
    }
 
    public void unuse()
    in
    {
-      assert(_data !is null);
+      assert(isRefCountInited);
    }
    body
    {
