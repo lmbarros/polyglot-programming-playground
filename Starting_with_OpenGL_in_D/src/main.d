@@ -4,6 +4,7 @@ import derelict.sdl2.sdl;
 import derelict.opengl3.gl3;
 
 import dogl;
+import dsdl;
 
 
 void initializeProgram()
@@ -59,8 +60,6 @@ immutable string strFragmentShader = `
 `;
 
 
-SDL_Window* theWindow;
-SDL_GLContext theContext;
 Program theProgram;
 
 VertexBufferObject positionBufferObject;
@@ -91,40 +90,12 @@ void main()
       return;
    }
 
-   //Use OpenGL 3.1
-   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                       SDL_GL_CONTEXT_PROFILE_CORE);
-
-   theWindow = SDL_CreateWindow("D/SDL/OpenGL Experiments",
-                                SDL_WINDOWPOS_UNDEFINED,
-                                SDL_WINDOWPOS_UNDEFINED,
-                                SCREEN_WIDTH,
-                                SCREEN_HEIGHT,
-                                SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-   if (theWindow is null )
-   {
-      writefln("Window could not be created! SDL Error: %s\n", SDL_GetError());
-      return;
-   }
-
-   // Create context
-   theContext = SDL_GL_CreateContext(theWindow);
-   if (theContext is null)
-   {
-      printf("OpenGL context could not be created! SDL Error: %s\n",
-             SDL_GetError());
-      return;
-   }
-
-   // Now that we have a context, we can reload the OpenGL bindings, and we'll
-   // get all the OpenGL 3+ stuff
-   DerelictGL3.reload();
-
-   // Use Vsync
-   if (SDL_GL_SetSwapInterval(1) < 0)
-      printf("Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
+   auto window = Window("D/SDL/OpenGL Experiments",
+                        SDL_WINDOWPOS_UNDEFINED,
+                        SDL_WINDOWPOS_UNDEFINED,
+                        SCREEN_WIDTH,
+                        SCREEN_HEIGHT,
+                        SDL_WINDOW_OPENGL);
 
    init();
 
@@ -154,6 +125,6 @@ void main()
       glDisableVertexAttribArray(0);
       theProgram.unuse();
 
-      SDL_GL_SwapWindow(theWindow);
+      window.swapBuffers();
    }
 }
