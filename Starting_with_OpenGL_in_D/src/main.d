@@ -100,31 +100,36 @@ void main()
    init();
 
    // The main loop
-   while (true)
-   {
-      // Handle events
-      SDL_Event e;
-      while (SDL_PollEvent(&e) != 0)
+   auto appManager = SDLAppManager();
+
+   auto keepRunning = true;
+
+   appManager.addHandler(
+      SDL_QUIT,
+      delegate(in ref SDL_Event event)
       {
-         if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN)
-            return;
-      }
+         keepRunning = false;
+      });
 
-      // Draw!
-      glClearColor(0.0, 0.4, 0.3, 0.0);
-      glClear(GL_COLOR_BUFFER_BIT);
+   appManager.addDrawHandler(
+      delegate(double deltaTime, double totalTime)
+      {
+         glClearColor(0.0, 0.4, 0.3, 0.0);
+         glClear(GL_COLOR_BUFFER_BIT);
 
-      theProgram.use();
+         theProgram.use();
 
-      positionBufferObject.bind();
-      glEnableVertexAttribArray(0);
-      glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, null);
+         positionBufferObject.bind();
+         glEnableVertexAttribArray(0);
+         glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, null);
 
-      glDrawArrays(GL_TRIANGLES, 0, 3);
+         glDrawArrays(GL_TRIANGLES, 0, 3);
 
-      glDisableVertexAttribArray(0);
-      theProgram.unuse();
+         glDisableVertexAttribArray(0);
+         theProgram.unuse();
 
-      window.swapBuffers();
-   }
+         window.swapBuffers();
+      });
+
+   appManager.run(delegate() { return keepRunning; });
 }

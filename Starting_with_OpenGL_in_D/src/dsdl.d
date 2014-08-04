@@ -88,177 +88,63 @@ public struct Window
 }
 
 
-
-/+
-
-/// A Vertex Buffer Object, AKA VBO.
-public struct VertexBufferObject
-{
-   mixin RefCountedBoilerplate;
-
-   /// The buffer object itself, as OpenGL sees it.
-   private GLuint buffer = 0;
-
-   /// Initializes the object.
-   public void init()
-   {
-      initRefCount();
-      glGenBuffers(1, &buffer);
-   }
-
-   /// Frees the object.
-   private void freeResources()
-   {
-      glDeleteBuffers(1, &buffer);
-   }
-
-   /// Binds the object to $(D GL_ARRAY_BUFFER).
-   public void bind()
-   in
-   {
-      assert(isRefCountInited);
-   }
-   body
-   {
-      glBindBuffer(GL_ARRAY_BUFFER, buffer);
-   }
-
-   /// Unbinds the object, leaving $(D GL_ARRAY_BUFFER) unbound.
-   public void unbind()
-   in
-   {
-      assert(isRefCountInited);
-   }
-   body
-   {
-      glBindBuffer(GL_ARRAY_BUFFER, 0);
-   }
-}
-
-
-
 /**
- * A Shader.
+ * Lotsa things: event handling, main loop, you name it.
  */
-public struct Shader
+public struct SDLAppManager
 {
-   mixin RefCountedBoilerplate;
+   alias eventHandler = void delegate(in ref SDL_Event event);
+   alias tickDrawHandler = void delegate(double deltaTime, double totalTime);
 
-   /// The shader object itself, as OpenGL sees it.
-   private GLuint shader = 0;
-
-   public void init(GLenum shaderType, string shaderText)
+   public void run(bool delegate() keepRunning)
    {
-      initRefCount();
+      auto prevTime = SDL_GetTicks() / 1000.0;
 
-      shader = glCreateShader(shaderType);
-      const st = shaderText.toStringz;
-      glShaderSource(shader, 1, &st, null);
-      glCompileShader(shader);
-
-      GLint status;
-      glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-
-      if (status == GL_FALSE)
+      while (keepRunning())
       {
-         GLint infoLogLength;
-         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+         // What time is it?
+         const now = SDL_GetTicks() / 1000.0;
+         const deltaTime = now - prevTime;
+         prevTime = now;
 
-         GLchar[] strInfoLog = new GLchar[infoLogLength + 1];
-         glGetShaderInfoLog(shader, infoLogLength, null, strInfoLog.ptr);
+         // Call tick and draw handlers
+         foreach (handler; _tickHandlers)
+            handler(deltaTime, now);
 
-         string strShaderType;
-         switch (shaderType)
+         foreach (handler; _drawHandlers)
+            handler(deltaTime, now);
+
+         // Call event handlers
+         SDL_Event event;
+         while (SDL_PollEvent(&event) != 0)
          {
-            case GL_VERTEX_SHADER:
-               strShaderType = "vertex";
-               break;
-            case GL_GEOMETRY_SHADER:
-               strShaderType = "geometry";
-               break;
-            case GL_FRAGMENT_SHADER:
-               strShaderType = "fragment";
-               break;
-            default:
-               strShaderType = "unknown";
+            if (event.type in _eventHandlers)
+            {
+               foreach (handler; _eventHandlers[event.type])
+                  handler(event);
+            }
          }
-
-         throw new Exception(format("Error compiling %s shader: %s",
-                                    strShaderType, strInfoLog));
       }
-
    }
 
-   private void freeResources()
+   public void addHandler(uint eventType, eventHandler handler)
    {
-      glDeleteShader(shader);
+      if (eventType !in _eventHandlers)
+         _eventHandlers[eventType] = [];
+      _eventHandlers[eventType] ~= handler;
    }
+
+   public void addTickHandler(tickDrawHandler handler)
+   {
+      _tickHandlers ~= handler;
+   }
+
+   public void addDrawHandler(tickDrawHandler handler)
+   {
+      _drawHandlers ~= handler;
+   }
+
+   private eventHandler[][uint] _eventHandlers;
+   private tickDrawHandler[] _tickHandlers;
+   private tickDrawHandler[] _drawHandlers;
 }
-
-
-
-public struct Program
-{
-   mixin RefCountedBoilerplate;
-
-   private GLuint program = 0;
-
-   public void init(Shader[] shaders...)
-   in
-   {
-      assert(shaders.length > 0);
-   }
-   body
-   {
-      initRefCount();
-      program = glCreateProgram();
-
-      foreach (shader; shaders)
-         glAttachShader(program, shader.shader);
-
-      glLinkProgram(program);
-
-      GLint status;
-      glGetProgramiv(program, GL_LINK_STATUS, &status);
-      if (status == GL_FALSE)
-      {
-         GLint infoLogLength;
-         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-         GLchar[] strInfoLog = new GLchar[infoLogLength + 1];
-         glGetProgramInfoLog(program, infoLogLength, null, strInfoLog.ptr);
-         throw new Exception(format("Shader linker error: %s", strInfoLog));
-      }
-
-      foreach (shader; shaders)
-         glDetachShader(program, shader.shader);
-   }
-
-   private void freeResources()
-   {
-      glDeleteProgram(program);
-   }
-
-   public void use()
-   in
-   {
-      assert(isRefCountInited);
-   }
-   body
-   {
-      glUseProgram(program);
-   }
-
-   public void unuse()
-   in
-   {
-      assert(isRefCountInited);
-   }
-   body
-   {
-      glUseProgram(0);
-   }
-}
-
-
-+/
