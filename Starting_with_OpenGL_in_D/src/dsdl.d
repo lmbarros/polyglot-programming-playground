@@ -89,12 +89,27 @@ public struct Window
 
 
 /**
- * Lotsa things: event handling, main loop, you name it.
+ * Lotsa things: event handling, main loop, Derelict little dances, you name it.
  */
 public struct SDLAppManager
 {
    alias eventHandler = void delegate(in ref SDL_Event event);
    alias tickDrawHandler = void delegate(double deltaTime, double totalTime);
+
+   @disable this();
+
+   // Flags passed directly to SDL
+   public this(uint flags)
+   {
+      DerelictSDL2.load();
+      DerelictGL3.load();
+
+      if (SDL_Init(flags) < 0)
+      {
+         throw new Exception(
+            format("Error initializing SDL: %s", SDL_GetError()));
+      }
+   }
 
    public void run(bool delegate() keepRunning)
    {

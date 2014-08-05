@@ -1,3 +1,5 @@
+module Example_01_Triangle;
+
 import std.stdio;
 import std.string;
 import derelict.sdl2.sdl;
@@ -39,8 +41,6 @@ void init()
    glBindVertexArray(vao);
 }
 
-
-
 immutable string strVertexShader = `
    #version 330
    layout(location = 0) in vec4 position;
@@ -55,7 +55,11 @@ immutable string strFragmentShader = `
    out vec4 outputColor;
    void main()
    {
-      outputColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+      float t = gl_FragCoord.y / 768.0;
+
+      outputColor = mix(vec4(1.0f, 0.0f, 0.0f, 1.0f),
+                        vec4(0.0f, 0.0f, 1.0f, 1.0f),
+                        t);
    }
 `;
 
@@ -77,37 +81,32 @@ immutable float[12] vertexPositions = [
 
 void main()
 {
-   DerelictSDL2.load();
-
-   DerelictGL3.load();
-
-   auto success = true;
+   auto appManager = SDLAppManager(SDL_INIT_VIDEO);
 
    // Window, please
-   if (SDL_Init(SDL_INIT_VIDEO) < 0)
-   {
-      writefln("SDL could not initialize! SDL Error: %s", SDL_GetError());
-      return;
-   }
-
-   auto window = Window("D/SDL/OpenGL Experiments",
+   auto window = Window("Triangle",
                         SDL_WINDOWPOS_UNDEFINED,
                         SDL_WINDOWPOS_UNDEFINED,
                         SCREEN_WIDTH,
                         SCREEN_HEIGHT,
                         SDL_WINDOW_OPENGL);
-
    init();
 
    // The main loop
-   auto appManager = SDLAppManager();
-
    auto keepRunning = true;
 
    appManager.addHandler(
       SDL_QUIT,
       delegate(in ref SDL_Event event)
       {
+         keepRunning = false;
+      });
+
+   appManager.addHandler(
+      SDL_KEYUP,
+      delegate(in ref SDL_Event event)
+      {
+         if (event.key.keysym.sym == SDLK_ESCAPE)
          keepRunning = false;
       });
 

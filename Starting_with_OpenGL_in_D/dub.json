@@ -5,7 +5,7 @@
    "license": "Proprietary",
 
    "targetType": "executable",
-   "targetName": "DOGL",
+   "targetName": "01_Triangle",
 
     "dependencies":
     {
