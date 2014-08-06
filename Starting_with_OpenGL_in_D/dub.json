@@ -23,5 +23,13 @@
             "sourcePaths": [ "02_ColoredTriangle", "common" ],
             "targetName": "02_ColoredTriangle.example"
         },
+
+        {
+            "targetType": "executable",
+            "dependencies": { "derelict-sdl2":"~>1.0.0", "derelict-gl3":"~master" },
+            "name": "03_CPUAnimation",
+            "sourcePaths": [ "03_CPUAnimation", "common" ],
+            "targetName": "03_CPUAnimation.example"
+        },
     ]
 }
