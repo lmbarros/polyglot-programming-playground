@@ -14,8 +14,8 @@ void initializeProgram()
    Shader vertexShader;
    Shader fragmentShader;
 
-   vertexShader.init(GL_VERTEX_SHADER, strVertexShader);
-   fragmentShader.init(GL_FRAGMENT_SHADER, strFragmentShader);
+   vertexShader.initFromString(GL_VERTEX_SHADER, strVertexShader);
+   fragmentShader.initFromString(GL_FRAGMENT_SHADER, strFragmentShader);
 
    theProgram.init(vertexShader, fragmentShader);
 }

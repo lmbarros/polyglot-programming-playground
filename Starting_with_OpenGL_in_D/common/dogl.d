@@ -68,7 +68,7 @@ public struct Shader
    /// The shader object itself, as OpenGL sees it.
    private GLuint shader = 0;
 
-   public void init(GLenum shaderType, string shaderText)
+   public void initFromString(GLenum shaderType, string shaderText)
    {
       initRefCount();
 
@@ -107,7 +107,25 @@ public struct Shader
          throw new Exception(format("Error compiling %s shader: %s",
                                     strShaderType, strInfoLog));
       }
+   }
 
+   public void initFromFile(GLenum shaderType, string path)
+   {
+      import std.file;
+
+      string shaderString;
+
+      try
+      {
+         shaderString = readText(path);
+      }
+      catch (Exception e)
+      {
+         throw new Exception(
+            format("Error reading shader from file: %s", e.msg));
+      }
+
+      initFromString(shaderType, shaderString);
    }
 
    private void freeResources()
