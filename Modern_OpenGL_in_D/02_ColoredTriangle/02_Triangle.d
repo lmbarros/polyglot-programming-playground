@@ -66,7 +66,7 @@ void main()
    auto appManager = SDLAppManager(SDL_INIT_VIDEO);
 
    // Window, please
-   auto window = Window("Triangle",
+   auto window = Window("Colored Triangle",
                         SDL_WINDOWPOS_UNDEFINED,
                         SDL_WINDOWPOS_UNDEFINED,
                         SCREEN_WIDTH,

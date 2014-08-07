@@ -15,9 +15,9 @@ void initializeProgram()
    Shader fragmentShader;
 
    vertexShader.initFromFile(
-      GL_VERTEX_SHADER, "02_ColoredTriangle/passthrough.vert");
+      GL_VERTEX_SHADER, "03_CPUAnimation/passthrough.vert");
    fragmentShader.initFromFile(
-      GL_FRAGMENT_SHADER, "02_ColoredTriangle/colors.frag");
+      GL_FRAGMENT_SHADER, "03_CPUAnimation/colors.frag");
 
    theProgram.init(vertexShader, fragmentShader);
 }
