@@ -1,6 +1,6 @@
 {
    "name": "dopengl",
-   "description": "Experimenting with OpenGL and D",
+   "description": "Learning Modern OpenGL with D and SDL",
    "authors": ["Leandro Motta Barros"],
    "license": "Proprietary",
    "sourcePaths": [ "common" ],
@@ -30,6 +30,14 @@
             "name": "03_CPUAnimation",
             "sourcePaths": [ "03_CPUAnimation", "common" ],
             "targetName": "03_CPUAnimation.example"
+        },
+
+        {
+            "targetType": "executable",
+            "dependencies": { "derelict-sdl2":"~>1.0.0", "derelict-gl3":"~master" },
+            "name": "04_GPUAnimation",
+            "sourcePaths": [ "04_GPUAnimation", "common" ],
+            "targetName": "04_GPUAnimation.example"
         },
     ]
 }

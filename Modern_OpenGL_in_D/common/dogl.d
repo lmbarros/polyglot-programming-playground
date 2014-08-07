@@ -197,4 +197,34 @@ public struct Program
    {
       glUseProgram(0);
    }
+
+   // Also makes this the currently used program
+   private GLint getUniformLocation(string name)
+   {
+      const uniformLoc = glGetUniformLocation(program, name.toStringz);
+      if (uniformLoc < 0)
+         throw new Exception(format("Uniform '%s' not found", name));
+
+      GLint currentProgram;
+      glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+
+      if (currentProgram != program)
+         use();
+
+      return uniformLoc;
+   }
+
+   // Also makes this the currently used program
+   public void setUniform(string name, float x)
+   {
+      const uniformLoc = getUniformLocation(name);
+      glUniform1f(uniformLoc, x);
+   }
+
+   // Also makes this the currently used program
+   public void setUniform(string name, float x, float y)
+   {
+      const uniformLoc = getUniformLocation(name);
+      glUniform2f(uniformLoc, x, y);
+   }
 }
