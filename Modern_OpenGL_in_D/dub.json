@@ -39,5 +39,13 @@
             "sourcePaths": [ "04_GPUAnimation", "common" ],
             "targetName": "04_GPUAnimation.example"
         },
+
+        {
+            "targetType": "executable",
+            "dependencies": { "derelict-sdl2":"~>1.0.0", "derelict-gl3":"~master" },
+            "name": "05_ManualPerspective",
+            "sourcePaths": [ "05_ManualPerspective", "common" ],
+            "targetName": "05_ManualPerspective.example"
+        },
     ]
 }
