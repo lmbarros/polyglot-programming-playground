@@ -1,4 +1,4 @@
-module Example_01_Triangle;
+module Example_02_ColoredTriangle;
 
 import std.stdio;
 import std.string;

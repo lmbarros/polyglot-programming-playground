@@ -1,4 +1,4 @@
-module Example_01_Triangle;
+module Example_04_GPUAnimation;
 
 import std.stdio;
 import std.string;
