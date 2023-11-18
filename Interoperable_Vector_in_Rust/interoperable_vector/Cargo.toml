@@ -1,0 +1,12 @@
+[package]
+name = "interoperable_vector"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+bevy-support = ["bevy"]
+raylib-support = ["raylib"]
+
+[dependencies]
+bevy = { version = "0.11.3", optional = true, default-features = false }
+raylib = { version = "4.5.0", git = "https://github.com/litten2up/raylib-rs", branch = "4.5.0", optional = true, default-features = false }

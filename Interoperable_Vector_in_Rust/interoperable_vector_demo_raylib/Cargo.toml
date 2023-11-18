@@ -1,0 +1,8 @@
+[package]
+name = "interoperable_vector_demo_raylib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+raylib = { version = "4.5.0", git = "https://github.com/litten2up/raylib-rs", branch = "4.5.0" }
+interoperable_vector = { path = "../interoperable_vector", features = ["raylib-support"]}
