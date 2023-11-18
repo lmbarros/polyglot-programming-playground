@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Boss';
+    src: url('komika_boss.eot');
+	src: url('komika_boss.eot?#iefix') format('embedded-opentype'),
+		url('komika_boss.woff2') format('woff2'),
+		url('komika_boss.woff') format('woff'),
+		url('komika_boss.ttf') format('truetype'),
+		url('komika_boss.otf') format('opentype'),
+		url('komika_boss.svg#Komika Boss') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0006-2122;
+}

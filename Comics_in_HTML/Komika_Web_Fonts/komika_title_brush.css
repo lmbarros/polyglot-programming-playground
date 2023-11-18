@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Title Brush';
+    src: url('komika_title_brush.eot');
+	src: url('komika_title_brush.eot?#iefix') format('embedded-opentype'),
+		url('komika_title_brush.woff2') format('woff2'),
+		url('komika_title_brush.woff') format('woff'),
+		url('komika_title_brush.ttf') format('truetype'),
+		url('komika_title_brush.otf') format('opentype'),
+		url('komika_title_brush.svg#Komika Title - Brush') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0019-2122;
+}

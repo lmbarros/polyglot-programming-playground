@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Glaze';
+    src: url('komika_glaze.eot');
+	src: url('komika_glaze.eot?#iefix') format('embedded-opentype'),
+		url('komika_glaze.woff2') format('woff2'),
+		url('komika_glaze.woff') format('woff'),
+		url('komika_glaze.ttf') format('truetype'),
+		url('komika_glaze.otf') format('opentype'),
+		url('komika_glaze.svg#Komika Glaze') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0006-2122;
+}

@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Parch';
+    src: url('komika_parch.eot');
+	src: url('komika_parch.eot?#iefix') format('embedded-opentype'),
+		url('komika_parch.woff2') format('woff2'),
+		url('komika_parch.woff') format('woff'),
+		url('komika_parch.ttf') format('truetype'),
+		url('komika_parch.otf') format('opentype'),
+		url('komika_parch.svg#Komika Parch') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0006-2122;
+}

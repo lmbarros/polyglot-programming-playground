@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Boo';
+    src: url('komika_boo.eot');
+	src: url('komika_boo.eot?#iefix') format('embedded-opentype'),
+		url('komika_boo.woff2') format('woff2'),
+		url('komika_boo.woff') format('woff'),
+		url('komika_boo.ttf') format('truetype'),
+		url('komika_boo.otf') format('opentype'),
+		url('komika_boo.svg#Komika Boo') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0006-2122;
+}

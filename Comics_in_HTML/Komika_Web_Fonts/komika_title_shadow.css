@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Title Shadow';
+    src: url('komika_title_shadow.eot');
+	src: url('komika_title_shadow.eot?#iefix') format('embedded-opentype'),
+		url('komika_title_shadow.woff2') format('woff2'),
+		url('komika_title_shadow.woff') format('woff'),
+		url('komika_title_shadow.ttf') format('truetype'),
+		url('komika_title_shadow.otf') format('opentype'),
+		url('komika_title_shadow.svg#Komika Title - Shadow') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0020-FB02;
+}

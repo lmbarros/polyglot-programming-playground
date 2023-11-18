@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Axis';
+    src: url('komika_axis.eot');
+	src: url('komika_axis.eot?#iefix') format('embedded-opentype'),
+		url('komika_axis.woff2') format('woff2'),
+		url('komika_axis.woff') format('woff'),
+		url('komika_axis.ttf') format('truetype'),
+		url('komika_axis.otf') format('opentype'),
+		url('komika_axis.svg#Komika Axis') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0006-2122;
+}

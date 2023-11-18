@@ -1,0 +1,14 @@
+@font-face {
+    font-family:'Komika Title Kaps';
+    src: url('komika_title_kaps.eot');
+	src: url('komika_title_kaps.eot?#iefix') format('embedded-opentype'),
+		url('komika_title_kaps.woff2') format('woff2'),
+		url('komika_title_kaps.woff') format('woff'),
+		url('komika_title_kaps.ttf') format('truetype'),
+		url('komika_title_kaps.otf') format('opentype'),
+		url('komika_title_kaps.svg#Komika Title - Kaps') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    unicode-range: U+0020-FB02;
+}
