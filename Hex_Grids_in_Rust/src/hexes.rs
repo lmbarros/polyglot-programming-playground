@@ -41,15 +41,17 @@ pub trait HexGrid {
     //   that coordinates can be handled as vectors, so we can do things like
     //   `start_position + offset`.
     // * Axial: Same as cube, but we leave the s coordinate out (which is
-    //   redundant anyway: s = -q - r). This is equivalent as slanting a square
-    //   grid to make look like a rhombus. That's the easiest to visualize it.
+    //   redundant anyway: s = -q - r). Also allows to deal with coordinates as
+    //   vectors. This is equivalent as slanting a square grid to make look like
+    //   a rhombus. That's the easiest to visualize it.
     // * Doubled: Variation of the offset scheme. In pointy top, every movement
     //   to the right doubles the q coordinate. In flat top, every movement down
     //   doubles the r coordinate. The hexes in-between on the next row/column
     //   get the in-between values, so this makes more sense than it looks at
     //   first. Keeps the constraint `(q + r) % 2 == 0`. Apparently using this
     //   coordinate system makes it simpler to implement certain algorithms
-    //   (when compared with offset, I guess).
+    //   (when compared with offset, I guess). Also allows to deal with
+    //   coordinates as vectors.
 
     // Converts an axial coordinate to an offset coordinate (one with the odd
     // rows or columns shifted).
@@ -82,6 +84,47 @@ pub trait HexGrid {
     // Converts an offset coordinate (one with even rows or columns shifted) to
     // a cube coordinate.
     fn offset_even_to_cube(col: i32, row: i32) -> (i32, i32, i32);
+
+    // Converts a doubled coordinate to an axial coordinate.
+    fn doubled_to_axial(q: i32, r: i32) -> (i32, i32);
+
+    // Converts an axial coordinate to a doubled coordinate.
+    fn axial_to_doubled(q: i32, r: i32) -> (i32, i32);
+
+    // Returns the neighbors of the hexagon at the given cube coordinate.
+    fn cube_neighbors(q: i32, r: i32, s: i32) -> Vec<(i32, i32, i32)> {
+        vec![
+            (q + 1, r + 0, s - 1),
+            (q + 1, r - 1, s + 0),
+            (q + 0, r - 1, s + 1),
+            (q - 1, r + 0, s + 1),
+            (q - 1, r + 1, s + 0),
+            (q + 0, r + 1, s - 1),
+        ]
+    }
+
+    // Returns the neighbors of the hexagon at the given axial coordinate.
+    fn axial_neighbors(q: i32, r: i32) -> Vec<(i32, i32)> {
+        vec![
+            (q + 1, r + 0),
+            (q + 1, r - 1),
+            (q + 0, r - 1),
+            (q - 1, r + 0),
+            (q - 1, r + 1),
+            (q + 0, r + 1),
+        ]
+    }
+
+    // Returns the neighbors of the hexagon at the given offset coordinate (with
+    // odd rows or columns shifted).
+    fn offset_odd_neighbors(col: i32, row: i32) -> Vec<(i32, i32)>;
+
+    // Returns the neighbors of the hexagon at the given offset coordinate (with
+    // even rows or columns shifted).
+    fn offset_even_neighbors(col: i32, row: i32) -> Vec<(i32, i32)>;
+
+    // Returns the neighbors of the hexagon at the given doubled coordinate.
+    fn doubled_neighbors(q: i32, r: i32) -> Vec<(i32, i32)>;
 }
 
 pub struct FlatTopHexGrid {
@@ -166,6 +209,75 @@ impl HexGrid for FlatTopHexGrid {
         let r = row - (col + (col & 1)) / 2;
         (q, r, -q - r)
     }
+
+    fn doubled_to_axial(q: i32, r: i32) -> (i32, i32) {
+        let r = (r - q) / 2;
+        (q, r)
+    }
+
+    fn axial_to_doubled(q: i32, r: i32) -> (i32, i32) {
+        let r = 2 * r + q;
+        (q, r)
+    }
+
+    // By the way, I guess these implementations of neighbors for the offset
+    // coordinate system show why algorithms are harder to implements in this
+    // coordinate system. Basically, every tile access needs an extra test
+    // because of the odd/even row/column shift.
+    fn offset_odd_neighbors(col: i32, row: i32) -> Vec<(i32, i32)> {
+        if col & 1 == 0 {
+            vec![
+                (col + 1, row + 0),
+                (col + 1, row - 1),
+                (col + 0, row - 1),
+                (col - 1, row - 1),
+                (col - 1, row + 0),
+                (col + 0, row + 1),
+            ]
+        } else {
+            vec![
+                (col + 1, row + 1),
+                (col + 1, row + 0),
+                (col + 0, row - 1),
+                (col - 1, row + 0),
+                (col - 1, row + 1),
+                (col + 0, row + 1),
+            ]
+        }
+    }
+
+    fn offset_even_neighbors(col: i32, row: i32) -> Vec<(i32, i32)> {
+        if col & 1 == 0 {
+            vec![
+                (col + 1, row + 1),
+                (col + 1, row + 0),
+                (col + 0, row - 1),
+                (col - 1, row + 0),
+                (col - 1, row + 1),
+                (col + 0, row + 1),
+            ]
+        } else {
+            vec![
+                (col + 1, row + 0),
+                (col + 1, row - 1),
+                (col + 0, row - 1),
+                (col - 1, row - 1),
+                (col - 1, row + 0),
+                (col + 0, row + 1),
+            ]
+        }
+    }
+
+    fn doubled_neighbors(q: i32, r: i32) -> Vec<(i32, i32)> {
+        vec![
+            (q + 1, r + 1),
+            (q + 1, r - 1),
+            (q + 0, r - 2),
+            (q - 1, r - 1),
+            (q - 1, r + 1),
+            (q + 0, r + 2),
+        ]
+    }
 }
 
 impl HexGrid for PointyTopHexGrid {
@@ -241,5 +353,70 @@ impl HexGrid for PointyTopHexGrid {
         let q = col - (row + (row & 1)) / 2;
         let r = row;
         (q, r, -q - r)
+    }
+
+    fn doubled_to_axial(q: i32, r: i32) -> (i32, i32) {
+        let q = (q - r) / 2;
+        (q, r)
+    }
+
+    fn axial_to_doubled(q: i32, r: i32) -> (i32, i32) {
+        let q = 2 * q + r;
+        (q, r)
+    }
+
+    fn offset_odd_neighbors(col: i32, row: i32) -> Vec<(i32, i32)> {
+        if row & 1 == 0 {
+            vec![
+                (col + 1, row + 0),
+                (col + 0, row - 1),
+                (col - 1, row - 1),
+                (col - 1, row + 0),
+                (col - 1, row + 1),
+                (col + 0, row + 1),
+            ]
+        } else {
+            vec![
+                (col + 1, row + 0),
+                (col + 1, row - 1),
+                (col + 0, row - 1),
+                (col - 1, row + 0),
+                (col + 0, row + 1),
+                (col + 1, row + 1),
+            ]
+        }
+    }
+
+    fn offset_even_neighbors(col: i32, row: i32) -> Vec<(i32, i32)> {
+        if row & 1 == 0 {
+            vec![
+                (col + 1, row + 0),
+                (col + 1, row - 1),
+                (col + 0, row - 1),
+                (col - 1, row + 0),
+                (col + 0, row + 1),
+                (col + 1, row + 1),
+            ]
+        } else {
+            vec![
+                (col + 1, row + 0),
+                (col + 0, row - 1),
+                (col - 1, row - 1),
+                (col - 1, row + 0),
+                (col - 1, row + 1),
+                (col + 0, row + 1),
+            ]
+        }
+    }
+
+    fn doubled_neighbors(q: i32, r: i32) -> Vec<(i32, i32)> {
+        vec![
+            (q + 2, r + 0),
+            (q + 1, r - 1),
+            (q - 1, r - 1),
+            (q - 2, r + 0),
+            (q - 1, r + 1),
+            (q + 1, r + 1),
+        ]
     }
 }
