@@ -2,6 +2,10 @@ use raylib::prelude::*;
 
 /// A hexagonal grid, rectangular in shape, with hexes arranged in a pointy-top
 /// orientation, using axial coordinates.
+///
+/// Also, going a bit old-style here, with a vector for each property of each
+/// hex, instead of a `Hex` struct. (Or is this cool again? With all the drive
+/// to ECS, cache locality, etc...)
 pub struct HexGrid {
     /// The number of hexes, horizontally.
     width: i32,
@@ -12,7 +16,8 @@ pub struct HexGrid {
     /// The color of each hex.
     hex_colors: Vec<Color>,
 
-    /// An int associated with each hex.
+    /// An int associated with each hex. This is just to let me differentiate
+    /// between hexes, for debugging purposes, and seeing what I am doing.
     hex_ints: Vec<i32>,
 }
 
@@ -70,6 +75,28 @@ impl HexGrid {
             let index = self.hex_array_index(q, r);
             Some(self.hex_ints[index])
         }
+    }
+
+    /// Iterates over all valid axial coordinates in the grid.
+    pub fn axial_coords(&self) -> impl Iterator<Item = (i32, i32)> {
+        let w = self.width;
+        let h = self.height;
+        let mut i = 0;
+        let mut j = -1;
+        std::iter::from_fn(move || {
+            j += 1;
+            if j >= w {
+                i += 1;
+                j = 0;
+            }
+            if i >= h {
+                None
+            } else {
+                let r = i;
+                let q = (-i / 2) + j;
+                Some((q, r))
+            }
+        })
     }
 
     //

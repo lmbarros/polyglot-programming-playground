@@ -15,16 +15,12 @@ impl<'a> HexGridRenderer<'a> {
         }
     }
 
+    // I don't like that here we are computing the coords manually. This is
+    // client code...
     pub fn draw<D: RaylibDraw>(&self, d: &mut D) {
-        for i in 0..self.hex_grid.height() {
-            for j in 0..self.hex_grid.width() {
-                let r = i;
-                let q = (-i / 2) + j;
-                self.draw_hex(d, q, r);
-            }
+        for (q, r) in self.hex_grid.axial_coords() {
+            self.draw_hex(d, q, r);
         }
-
-        self.draw_hex(d, 0, 0);
     }
 
     //
