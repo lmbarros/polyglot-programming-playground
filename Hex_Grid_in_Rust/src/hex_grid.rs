@@ -133,6 +133,6 @@ impl HexGrid {
         let x = q + r2;
 
         // Now we can treat our storage as a 2D array.
-        (y * self.height + x) as usize
+        (y * self.width + x) as usize
     }
 }
