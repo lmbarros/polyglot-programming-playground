@@ -26,11 +26,14 @@ fn draw_loop(renderer: render::HexGridRenderer, hex_grid: &HexGrid) {
     // };
 
     while !rl.window_should_close() {
+        let mouse_pos = rl.get_mouse_position();
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::WHITE);
 
         // let mut d2 = d.begin_mode2D(cam);
 
         renderer.draw(&mut d);
+        let (q, r) = renderer.hex_coords_at_pos(mouse_pos);
+        renderer.highlight_hex(&mut d, q, r);
     }
 }

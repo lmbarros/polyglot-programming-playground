@@ -113,7 +113,7 @@ impl HexGrid {
     /// coordinates.
     ///
     /// Validity of the coordinates is expected to have been already checked
-    /// at this point, so we simply `assert!()`` here.
+    /// at this point, so we simply `assert!()` here.
     fn hex_array_index(&self, q: i32, r: i32) -> usize {
         assert!(
             self.are_coords_valid(q, r),
