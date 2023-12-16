@@ -5,24 +5,20 @@ use raylib::prelude::*;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // Not just a renderer. Also a picker.
-pub struct HexGridRenderer<'a> {
-    hex_grid: &'a HexGrid,
+pub struct HexGridRenderer {
     hex_size: f32,
 }
 
-impl<'a> HexGridRenderer<'a> {
-    pub fn new(hex_grid: &'a HexGrid, hex_size: f32) -> Self {
-        Self {
-            hex_grid: hex_grid,
-            hex_size,
-        }
+impl<'a> HexGridRenderer {
+    pub fn new(hex_size: f32) -> Self {
+        Self { hex_size }
     }
 
     // I don't like that here we are computing the coords manually. This is
     // client code...
-    pub fn draw<D: RaylibDraw>(&self, d: &mut D) {
-        for (q, r) in self.hex_grid.axial_coords() {
-            self.draw_hex(d, q, r);
+    pub fn draw<D: RaylibDraw>(&self, d: &mut D, hex_grid: &HexGrid) {
+        for (q, r) in hex_grid.axial_coords() {
+            self.draw_hex(d, hex_grid, q, r);
         }
     }
 
@@ -71,12 +67,12 @@ impl<'a> HexGridRenderer<'a> {
     // Rendering helpers
     //
 
-    fn draw_hex<D: RaylibDraw>(&self, d: &mut D, q: i32, r: i32) {
+    fn draw_hex<D: RaylibDraw>(&self, d: &mut D, hex_grid: &HexGrid, q: i32, r: i32) {
         let width2 = self.hex_width() / 2.0;
         let height2 = self.hex_height() / 2.0;
         let center = self.hex_center(q, r) + Vector2::new(width2, height2);
-        let color = self.hex_grid.hex_color(q, r).unwrap_or(Color::MAGENTA);
-        let int = self.hex_grid.hex_int(q, r).unwrap_or(-1);
+        let color = hex_grid.hex_color(q, r).unwrap_or(Color::MAGENTA);
+        let int = hex_grid.hex_int(q, r).unwrap_or(-1);
 
         d.draw_poly(center, 6, height2, 0.0, color);
         d.draw_poly_lines(center, 6, height2, 0.0, Color::DARKGRAY);

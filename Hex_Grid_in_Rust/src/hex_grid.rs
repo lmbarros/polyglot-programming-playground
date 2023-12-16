@@ -68,6 +68,15 @@ impl HexGrid {
         }
     }
 
+    pub fn set_hex_color(&mut self, q: i32, r: i32, color: Color) {
+        if !self.are_coords_valid(q, r) {
+            return;
+        }
+
+        let index = self.hex_array_index(q, r);
+        self.hex_colors[index] = color;
+    }
+
     pub fn hex_int(&self, q: i32, r: i32) -> Option<i32> {
         if !self.are_coords_valid(q, r) {
             None
