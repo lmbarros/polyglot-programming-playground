@@ -28,19 +28,18 @@ impl<'a> HexGridRenderer {
 
     // Highlight the hex at the given axial coordinates.
     pub fn highlight_hex<D: RaylibDraw>(&self, d: &mut D, q: i32, r: i32) {
-        let width2 = self.hex_width() / 2.0;
-        let height2 = self.hex_height() / 2.0;
-        let center = self.hex_center(q, r) + Vector2::new(width2, height2);
+        let center = self.hex_center(q, r);
 
         let magenta = Color::MAGENTA.color_to_hsv();
         let cyan = Color::CYAN.color_to_hsv();
         let target_hue = magenta.lerp(cyan, get_pulse(10.0)).x;
         let color = Color::color_from_hsv(target_hue, 1.0, 1.0);
-        let radius = height2 + (height2 * 0.2 * get_pulse(5.0));
-        d.draw_poly_lines(center, 6, radius, 0.0, color);
+        let hex_radius = self.hex_height() / 2.0;
+        let highlight_radius = hex_radius + (hex_radius * 0.2 * get_pulse(5.0));
+        d.draw_poly_lines(center, 6, highlight_radius, 0.0, color);
     }
 
-    /// Returns the axial coordinates of the hex that is closest to the given
+    /// Returns the axial coordinates of the hex that is under the given
     /// position.
     ///
     /// Based on [Chris Cox's
@@ -52,8 +51,8 @@ impl<'a> HexGridRenderer {
         // Convert to a Cartesian coordinate system in which (0,0) is the center
         // of the hex at axial coordinates (0,0), and each unit in size is equal
         // to the hex size.
-        let x = ((p.x - self.hex_width() / 2.0) / self.hex_size) / sqrt3;
-        let y = ((p.y - self.hex_height() / 2.0) / self.hex_size) / -sqrt3;
+        let x = (p.x / self.hex_size) / sqrt3;
+        let y = (p.y / self.hex_size) / -sqrt3;
 
         // Convert from that (x,y) to (q,r)
         let t = sqrt3 * y + 1.0; // scaled y, plus phase
@@ -72,14 +71,14 @@ impl<'a> HexGridRenderer {
     //
 
     fn draw_hex<D: RaylibDraw>(&self, d: &mut D, hex_grid: &HexGrid, q: i32, r: i32) {
-        let width2 = self.hex_width() / 2.0;
-        let height2 = self.hex_height() / 2.0;
-        let center = self.hex_center(q, r) + Vector2::new(width2, height2);
+        let center = self.hex_center(q, r);
         let color = hex_grid.hex_color(q, r).unwrap_or(Color::MAGENTA);
         let int = hex_grid.hex_int(q, r).unwrap_or(-1);
 
-        d.draw_poly(center, 6, height2, 0.0, color);
-        d.draw_poly_lines(center, 6, height2, 0.0, Color::DARKGRAY);
+        let radius = self.hex_height() / 2.0;
+
+        d.draw_poly(center, 6, radius, 0.0, color);
+        d.draw_poly_lines(center, 6, radius, 0.0, Color::DARKGRAY);
         d.draw_text(
             format!("{}", int).as_str(),
             center.x as i32,
@@ -90,9 +89,7 @@ impl<'a> HexGridRenderer {
     }
 
     fn draw_extras<D: RaylibDraw>(&self, d: &mut D, hex_grid: &HexGrid, q: i32, r: i32) {
-        let width2 = self.hex_width() / 2.0;
-        let height2 = self.hex_height() / 2.0;
-        let center = self.hex_center(q, r) + Vector2::new(width2, height2);
+        let center = self.hex_center(q, r);
 
         if let Some(color) = hex_grid.w_wall(q, r) {
             let start = self.hex_corner_position(center, 3);

@@ -30,7 +30,7 @@ fn main() {
         .build();
 
     let cam = Camera2D {
-        offset: Vector2::new(35.0, 35.0),
+        offset: Vector2::new(70.0, 70.0),
         zoom: 1.0,
         ..Default::default()
     };
