@@ -1,5 +1,4 @@
 mod hex_grid;
-use std::fs;
 
 use hex_grid::*;
 mod render;
@@ -20,7 +19,7 @@ const SCREEN_WIDTH: i32 = 1280;
 const SCREEN_HEIGHT: i32 = 720;
 
 fn main() {
-    let mut hex_grid = HexGrid::new(20, 12);
+    let mut hex_grid = HexGrid::new(19, 11);
     let mut color: usize = 0;
 
     let renderer = render::HexGridRenderer::new(35.0);
@@ -30,15 +29,20 @@ fn main() {
         .title("Hex Grid!")
         .build();
 
-    // let cam = Camera2D {
-    //     offset: Vector2::new(SCREEN_WIDTH as f32 / 2.0, SCREEN_HEIGHT as f32 / 2.0),
-    //     zoom: 1.0,
-    //     ..Default::default()
-    // };
+    let cam = Camera2D {
+        offset: Vector2::new(35.0, 35.0),
+        zoom: 1.0,
+        ..Default::default()
+    };
+
+    // Paint all hexes the same color.
+    for (q, r) in hex_grid.axial_coords() {
+        hex_grid.set_hex_color(q, r, COLORS[0]);
+    }
 
     while !rl.window_should_close() {
         // Handle input
-        let mouse_pos = rl.get_mouse_position();
+        let mouse_pos = rl.get_mouse_position() - cam.offset;
 
         if rl.is_key_pressed(KeyboardKey::KEY_C) {
             color = (color + 1) % COLORS.len();
@@ -53,11 +57,12 @@ fn main() {
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::WHITE);
 
-        // let mut d2 = d.begin_mode2D(cam);
-
-        renderer.draw(&mut d, &hex_grid);
-        let (q, r) = renderer.hex_coords_at_pos(mouse_pos);
-        renderer.highlight_hex(&mut d, q, r);
+        {
+            let mut d2 = d.begin_mode2D(cam);
+            renderer.draw(&mut d2, &hex_grid);
+            let (q, r) = renderer.hex_coords_at_pos(mouse_pos);
+            renderer.highlight_hex(&mut d2, q, r);
+        }
         draw_hud(&mut d, color);
     }
 }

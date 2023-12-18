@@ -13,12 +13,34 @@ pub struct HexGrid {
     /// The number of hexes, vertically.
     height: i32,
 
+    //
+    // Properties of each hex. Each of these contains width * height elements.
+    //
     /// The color of each hex.
     hex_colors: Vec<Color>,
 
     /// An int associated with each hex. This is just to let me differentiate
     /// between hexes, for debugging purposes, and seeing what I am doing.
     hex_ints: Vec<i32>,
+
+    //
+    // Properties of each hex's birder. Each of these contains
+    // (width + 1) * (height + 1) elements, with the extra row and column
+    // storing data for hexes near the edges of the grid.
+    //
+    // Conveniently, we treat the grid as wrapping around horizontally, so the
+    // extra hexes can be interpreted as being either to the east or the west of
+    // the grid, as needed. Different properties of fhe same "out-of-bounds hex"
+    // can even be used as both west and east of the grid, at the same time
+    // (this happens on odd rows).
+    /// The color of each hex's west wall.
+    w_wall: Vec<Option<Color>>,
+
+    /// The color of each hex's north-west wall.
+    nw_wall: Vec<Option<Color>>,
+
+    /// The color of each hex's north-east wall.
+    ne_wall: Vec<Option<Color>>,
 }
 
 impl HexGrid {
@@ -27,13 +49,26 @@ impl HexGrid {
         assert!(width > 0, "width must be greater than 0, got {}", width);
         assert!(height > 0, "height must be greater than 0, got {}", height);
 
-        let num_hexes = width * height;
-        let mut hex_colors = Vec::with_capacity(num_hexes as usize);
-        let mut hex_ints = Vec::with_capacity(num_hexes as usize);
+        // Per hex properties
+        let size = width * height;
+        let mut hex_colors = Vec::with_capacity(size as usize);
+        let mut hex_ints = Vec::with_capacity(size as usize);
 
-        for i in 0..num_hexes {
-            hex_colors.push(Color::LIGHTSLATEGRAY);
+        for i in 0..size {
+            hex_colors.push(Color::MAGENTA);
             hex_ints.push(i);
+        }
+
+        // Per border properties
+        let size_ext = (width + 1) * (height + 1);
+        let mut w_wall = Vec::with_capacity(size_ext as usize);
+        let mut nw_wall = Vec::with_capacity(size_ext as usize);
+        let mut ne_wall = Vec::with_capacity(size_ext as usize);
+
+        for _ in 0..size_ext {
+            w_wall.push(Some(Color::CHOCOLATE)); // TODO: Temp!
+            nw_wall.push(Some(Color::BURLYWOOD)); // TODO: Temp!
+            ne_wall.push(Some(Color::INDIGO)); // TODO: Temp!
         }
 
         Self {
@@ -41,6 +76,9 @@ impl HexGrid {
             height,
             hex_colors,
             hex_ints,
+            w_wall,
+            nw_wall,
+            ne_wall,
         }
     }
 
@@ -86,6 +124,21 @@ impl HexGrid {
         }
     }
 
+    pub fn w_wall(&self, q: i32, r: i32) -> Option<Color> {
+        let index = self.hex_array_index(q, r);
+        self.w_wall[index]
+    }
+
+    pub fn nw_wall(&self, q: i32, r: i32) -> Option<Color> {
+        let index = self.hex_array_index(q, r);
+        self.nw_wall[index]
+    }
+
+    pub fn ne_wall(&self, q: i32, r: i32) -> Option<Color> {
+        let index = self.hex_array_index(q, r);
+        self.ne_wall[index]
+    }
+
     /// Iterates over all valid axial coordinates in the grid.
     pub fn axial_coords(&self) -> impl Iterator<Item = (i32, i32)> {
         let w = self.width;
@@ -108,6 +161,34 @@ impl HexGrid {
         })
     }
 
+    /// Iterates over all "extra" axial coordinates in the grid. (Actually, over
+    /// all normal hex plus the extra ones!)
+    pub fn axial_coords_ext(&self) -> impl Iterator<Item = (i32, i32)> {
+        let w = self.width + 1;
+        let h = self.height + 1;
+        let mut i = 0;
+        let mut j = -1;
+        std::iter::from_fn(move || {
+            j += 1;
+
+            // We don't need the extra column on the extra row.
+            if i == h - 1 && j == w - 1 {
+                return None;
+            }
+
+            if j >= w {
+                i += 1;
+
+                // Odd rows start with an extra hex to the west (and the same
+                // extra hex appears on the wast side, too).
+                j = if i & 1 == 1 { -1 } else { 0 };
+            }
+            let r = i;
+            let q = (-i / 2) + j;
+            return Some((q, r));
+        })
+    }
+
     //
     // Internal helpers
     //
@@ -121,18 +202,10 @@ impl HexGrid {
     /// Returns the index where we store the hex located at the given axial
     /// coordinates.
     ///
-    /// Validity of the coordinates is expected to have been already checked
-    /// at this point, so we simply `assert!()` here.
+    /// Validity of the coordinates is not checked by design (because this is
+    /// also used for the "extra hexes" that go beyond the normally valid hex
+    /// coordinates).
     fn hex_array_index(&self, q: i32, r: i32) -> usize {
-        assert!(
-            self.are_coords_valid(q, r),
-            "axial coordinates ({}, {}) are invalid for a {} x {} hex grid.",
-            q,
-            r,
-            self.width,
-            self.height
-        );
-
         // r grows by 1 every row we go down.
         let y = r;
 

@@ -20,6 +20,10 @@ impl<'a> HexGridRenderer {
         for (q, r) in hex_grid.axial_coords() {
             self.draw_hex(d, hex_grid, q, r);
         }
+
+        for (q, r) in hex_grid.axial_coords_ext() {
+            self.draw_extras(d, hex_grid, q, r);
+        }
     }
 
     // Highlight the hex at the given axial coordinates.
@@ -76,16 +80,29 @@ impl<'a> HexGridRenderer {
 
         d.draw_poly(center, 6, height2, 0.0, color);
         d.draw_poly_lines(center, 6, height2, 0.0, Color::DARKGRAY);
-        for i in 0..6 {
-            let p = self.hex_corner_position(center, i);
-            d.draw_circle_v(p, 3.0, Color::BLACK);
-            d.draw_text(
-                format!("{}", int).as_str(),
-                center.x as i32,
-                center.y as i32,
-                20,
-                Color::BLACK,
-            );
+    }
+
+    fn draw_extras<D: RaylibDraw>(&self, d: &mut D, hex_grid: &HexGrid, q: i32, r: i32) {
+        let width2 = self.hex_width() / 2.0;
+        let height2 = self.hex_height() / 2.0;
+        let center = self.hex_center(q, r) + Vector2::new(width2, height2);
+
+        if let Some(color) = hex_grid.w_wall(q, r) {
+            let start = self.hex_corner_position(center, 3);
+            let end = self.hex_corner_position(center, 4);
+            d.draw_line_ex(start, end, 6.0, color);
+        }
+
+        if let Some(color) = hex_grid.nw_wall(q, r) {
+            let start = self.hex_corner_position(center, 4);
+            let end = self.hex_corner_position(center, 5);
+            d.draw_line_ex(start, end, 6.0, color);
+        }
+
+        if let Some(color) = hex_grid.ne_wall(q, r) {
+            let start = self.hex_corner_position(center, 5);
+            let end = self.hex_corner_position(center, 0);
+            d.draw_line_ex(start, end, 6.0, color);
         }
     }
 
