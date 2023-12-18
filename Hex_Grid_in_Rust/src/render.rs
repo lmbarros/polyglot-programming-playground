@@ -26,19 +26,6 @@ impl<'a> HexGridRenderer {
         }
     }
 
-    // Highlight the hex at the given axial coordinates.
-    pub fn highlight_hex<D: RaylibDraw>(&self, d: &mut D, q: i32, r: i32) {
-        let center = self.hex_center(q, r);
-
-        let magenta = Color::MAGENTA.color_to_hsv();
-        let cyan = Color::CYAN.color_to_hsv();
-        let target_hue = magenta.lerp(cyan, get_pulse(10.0)).x;
-        let color = Color::color_from_hsv(target_hue, 1.0, 1.0);
-        let hex_radius = self.hex_height() / 2.0;
-        let highlight_radius = hex_radius + (hex_radius * 0.2 * get_pulse(5.0));
-        d.draw_poly_lines(center, 6, highlight_radius, 0.0, color);
-    }
-
     /// Returns the axial coordinates of the hex that is under the given
     /// position.
     ///
@@ -64,6 +51,75 @@ impl<'a> HexGridRenderer {
         let q = (qf).floor() as i32; // pseudo x, quantized and thus requires floor
         let r = (rf).floor() as i32; // pseudo y, quantized and thus requires floor
         (q, -r)
+    }
+
+    /// Returns the axial coordinates of the hex that is under the given
+    /// position, plus the indices of the wall closest to that same position.
+    /// These indices can be passed to `self.hex_corner_position()` to obtain
+    /// the wall coordinates. The indices are sorted so that the wall segment is
+    /// drawn in the clockwise direction.
+    ///
+    /// AKA wall-picking.
+    pub fn wall_at_pos(&self, p: Vector2) -> (i32, i32, u8, u8) {
+        let (q, r) = self.hex_coords_at_pos(p);
+        let center = self.hex_center(q, r);
+
+        let mut min_dist_1 = f32::MAX;
+        let mut min_dist_2 = f32::MAX;
+        let mut closest_1: u8 = 255;
+        let mut closest_2: u8 = 255;
+
+        for i in 0..6 {
+            let corner_pos = self.hex_corner_position(center, i);
+            let dist = p.distance_to(corner_pos);
+            if dist < min_dist_1 {
+                min_dist_2 = min_dist_1;
+                closest_2 = closest_1;
+                min_dist_1 = dist;
+                closest_1 = i;
+            } else if dist < min_dist_2 {
+                min_dist_2 = dist;
+                closest_2 = i;
+            }
+        }
+
+        if closest_1 == 0 && closest_2 == 5 {
+            (q, r, 5, 0)
+        } else if closest_1 > closest_2 {
+            (q, r, closest_2, closest_1)
+        } else {
+            (q, r, closest_1, closest_2)
+        }
+    }
+
+    /// Highlights the hex at the given axial coordinates.
+    pub fn highlight_hex<D: RaylibDraw>(&self, d: &mut D, q: i32, r: i32) {
+        let center = self.hex_center(q, r);
+
+        let magenta = Color::MAGENTA.color_to_hsv();
+        let cyan = Color::CYAN.color_to_hsv();
+        let target_hue = magenta.lerp(cyan, get_pulse(10.0)).x;
+        let color = Color::color_from_hsv(target_hue, 1.0, 1.0);
+        let hex_radius = self.hex_height() / 2.0;
+        let highlight_radius = hex_radius + (hex_radius * 0.2 * get_pulse(5.0));
+        d.draw_poly_lines(center, 6, highlight_radius, 0.0, color);
+    }
+
+    /// Highlights a wall of a hex. It will be from the hex at the given axial
+    /// coordinates. And the wall will be the one from vertex `v1` to vertex
+    /// `v2`.
+    pub fn highlight_wall<D: RaylibDraw>(&self, d: &mut D, q: i32, r: i32, v1: u8, v2: u8) {
+        let v1_pos = self.hex_corner_position(self.hex_center(q, r), v1);
+        let v2_pos = self.hex_corner_position(self.hex_center(q, r), v2);
+
+        let thickness = 7.0 + 5.0 * get_pulse(5.0);
+
+        let magenta = Color::MAGENTA.color_to_hsv();
+        let cyan = Color::CYAN.color_to_hsv();
+        let target_hue = magenta.lerp(cyan, get_pulse(10.0)).x;
+        let color = Color::color_from_hsv(target_hue, 1.0, 1.0).fade(0.5);
+
+        d.draw_line_ex(v1_pos, v2_pos, thickness, color);
     }
 
     //

@@ -18,8 +18,16 @@ const COLORS: [Color; 8] = [
 const SCREEN_WIDTH: i32 = 1280;
 const SCREEN_HEIGHT: i32 = 720;
 
+#[derive(PartialEq, Clone, Copy)]
+enum Mode {
+    Hex,
+    AddWall,
+    RemoveWall,
+}
+
 fn main() {
     let mut hex_grid = HexGrid::new(19, 11);
+    let mut mode = Mode::Hex;
     let mut color: usize = 0;
 
     let renderer = render::HexGridRenderer::new(35.0);
@@ -60,27 +68,49 @@ fn main() {
         {
             let mut d2 = d.begin_mode2D(cam);
             renderer.draw(&mut d2, &hex_grid);
-            let (q, r) = renderer.hex_coords_at_pos(mouse_pos);
-            renderer.highlight_hex(&mut d2, q, r);
+            if mode == Mode::Hex {
+                let (q, r) = renderer.hex_coords_at_pos(mouse_pos);
+                renderer.highlight_hex(&mut d2, q, r);
+            } else {
+                let (q, r, v1, v2) = renderer.wall_at_pos(mouse_pos);
+                renderer.highlight_wall(&mut d2, q, r, v1, v2);
+            }
         }
-        draw_hud(&mut d, color);
+
+        draw_hud(&mut d, mode, color);
     }
 }
 
-fn draw_hud<D: RaylibDraw>(d: &mut D, color: usize) {
+fn draw_hud<D: RaylibDraw>(d: &mut D, mode: Mode, color: usize) {
     let w = 30;
     let h = 20;
-    let x = SCREEN_WIDTH - w - 5;
-    let y = SCREEN_HEIGHT - h - 5;
-    d.draw_rectangle(x, y, w, h, COLORS[color]);
-    d.draw_rectangle_lines(x, y, w, h, Color::BLACK);
 
+    let mode_string = format!(
+        "(M)ode: {}",
+        match mode {
+            Mode::Hex => "Hex",
+            Mode::AddWall => "Add Wall",
+            Mode::RemoveWall => "Remove Wall",
+        }
+    );
     let font_size = 20;
     d.draw_text(
-        "Mode: Hex",
+        mode_string.as_str(),
         5,
         SCREEN_HEIGHT - font_size - 5,
         font_size,
         Color::BLACK,
     );
+
+    d.draw_text(
+        "(C)olor:",
+        250,
+        SCREEN_HEIGHT - font_size - 5,
+        font_size,
+        Color::BLACK,
+    );
+    let x = 340;
+    let y = SCREEN_HEIGHT - h - 5;
+    d.draw_rectangle(x, y, w, h, COLORS[color]);
+    d.draw_rectangle_lines(x, y, w, h, Color::BLACK);
 }
