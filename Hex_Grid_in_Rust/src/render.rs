@@ -80,6 +80,13 @@ impl<'a> HexGridRenderer {
 
         d.draw_poly(center, 6, height2, 0.0, color);
         d.draw_poly_lines(center, 6, height2, 0.0, Color::DARKGRAY);
+        d.draw_text(
+            format!("{}", int).as_str(),
+            center.x as i32,
+            center.y as i32,
+            20,
+            Color::BLACK,
+        );
     }
 
     fn draw_extras<D: RaylibDraw>(&self, d: &mut D, hex_grid: &HexGrid, q: i32, r: i32) {
