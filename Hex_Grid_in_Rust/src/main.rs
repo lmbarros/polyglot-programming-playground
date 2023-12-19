@@ -54,11 +54,40 @@ fn main() {
 
         if rl.is_key_pressed(KeyboardKey::KEY_C) {
             color = (color + 1) % COLORS.len();
+        } else if rl.is_key_pressed(KeyboardKey::KEY_M) {
+            mode = match mode {
+                Mode::Hex => Mode::AddWall,
+                Mode::AddWall => Mode::RemoveWall,
+                Mode::RemoveWall => Mode::Hex,
+            };
         }
 
         if rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
-            let (q, r) = renderer.hex_coords_at_pos(mouse_pos);
-            hex_grid.set_hex_color(q, r, COLORS[color]);
+            match mode {
+                Mode::Hex => {
+                    let (q, r) = renderer.hex_coords_at_pos(mouse_pos);
+                    hex_grid.set_hex_color(q, r, COLORS[color]);
+                }
+                _ => {
+                    let color = if mode == Mode::AddWall {
+                        Some(COLORS[color])
+                    } else {
+                        None
+                    };
+
+                    let (q, r, v1, _) = renderer.wall_at_pos(mouse_pos);
+
+                    match v1 {
+                        0 => hex_grid.set_e_wall(q, r, color),
+                        1 => hex_grid.set_se_wall(q, r, color),
+                        2 => hex_grid.set_sw_wall(q, r, color),
+                        3 => hex_grid.set_w_wall(q, r, color),
+                        4 => hex_grid.set_nw_wall(q, r, color),
+                        5 => hex_grid.set_ne_wall(q, r, color),
+                        _ => {}
+                    }
+                }
+            }
         }
 
         // Draw!

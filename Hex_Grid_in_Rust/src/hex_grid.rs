@@ -33,6 +33,10 @@ pub struct HexGrid {
     // the grid, as needed. Different properties of fhe same "out-of-bounds hex"
     // can even be used as both west and east of the grid, at the same time
     // (this happens on odd rows).
+    //
+    // Storing those walls in an array of 3 elements instead of 3 separate
+    // members? Would this help with some algorithm?
+    //
     /// The color of each hex's west wall.
     w_wall: Vec<Option<Color>>,
 
@@ -66,9 +70,9 @@ impl HexGrid {
         let mut ne_wall = Vec::with_capacity(size_ext as usize);
 
         for _ in 0..size_ext {
-            w_wall.push(Some(Color::CHOCOLATE)); // TODO: Temp!
-            nw_wall.push(Some(Color::BURLYWOOD)); // TODO: Temp!
-            ne_wall.push(Some(Color::INDIGO)); // TODO: Temp!
+            w_wall.push(None);
+            nw_wall.push(None);
+            ne_wall.push(None);
         }
 
         Self {
@@ -115,6 +119,38 @@ impl HexGrid {
         self.hex_colors[index] = color;
     }
 
+    pub fn set_w_wall(&mut self, q: i32, r: i32, color: Option<Color>) {
+        let index = self.hex_array_index_ext(q, r);
+        self.w_wall[index] = color;
+    }
+
+    pub fn set_nw_wall(&mut self, q: i32, r: i32, color: Option<Color>) {
+        let index = self.hex_array_index_ext(q, r);
+        self.nw_wall[index] = color;
+    }
+
+    pub fn set_ne_wall(&mut self, q: i32, r: i32, color: Option<Color>) {
+        let index = self.hex_array_index_ext(q, r);
+        self.ne_wall[index] = color;
+    }
+
+    // East wall is the same as the west wall of the hex to the east. Similar to
+    // the cases below.
+    pub fn set_e_wall(&mut self, q: i32, r: i32, color: Option<Color>) {
+        let index = self.hex_array_index_ext(q + 1, r);
+        self.w_wall[index] = color;
+    }
+
+    pub fn set_se_wall(&mut self, q: i32, r: i32, color: Option<Color>) {
+        let index = self.hex_array_index_ext(q, r + 1);
+        self.nw_wall[index] = color;
+    }
+
+    pub fn set_sw_wall(&mut self, q: i32, r: i32, color: Option<Color>) {
+        let index = self.hex_array_index_ext(q - 1, r + 1);
+        self.ne_wall[index] = color;
+    }
+
     pub fn hex_int(&self, q: i32, r: i32) -> Option<i32> {
         if !self.are_coords_valid(q, r) {
             None
@@ -125,17 +161,17 @@ impl HexGrid {
     }
 
     pub fn w_wall(&self, q: i32, r: i32) -> Option<Color> {
-        let index = self.hex_array_index(q, r);
+        let index = self.hex_array_index_ext(q, r);
         self.w_wall[index]
     }
 
     pub fn nw_wall(&self, q: i32, r: i32) -> Option<Color> {
-        let index = self.hex_array_index(q, r);
+        let index = self.hex_array_index_ext(q, r);
         self.nw_wall[index]
     }
 
     pub fn ne_wall(&self, q: i32, r: i32) -> Option<Color> {
-        let index = self.hex_array_index(q, r);
+        let index = self.hex_array_index_ext(q, r);
         self.ne_wall[index]
     }
 
@@ -216,5 +252,18 @@ impl HexGrid {
 
         // Now we can treat our storage as a 2D array.
         (y * self.width + x) as usize
+    }
+
+    fn hex_array_index_ext(&self, q: i32, r: i32) -> usize {
+        // r grows by 1 every row we go down.
+        let y = r;
+
+        // q grows by 1 every (jagged) column we go right, but the coordinates
+        // are shifted to the left every other row.
+        let r2 = r / 2;
+        let x = q + r2;
+
+        // Now we can treat our storage as a 2D array.
+        (y * (self.width + 1) + x) as usize
     }
 }
