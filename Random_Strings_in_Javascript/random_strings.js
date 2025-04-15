@@ -47,7 +47,7 @@ function cryptoRandomString(length, alphabet) {
 
   for (let i = 0; i < length; i++) {
     const byte = randomBytes[i];
-    result.push(alphabet[byte % alphabetLength]);
+    result.push(alphabet[byte % alphabetLength]); // modulo bias here!
   }
 
   return result.join('');
@@ -61,7 +61,7 @@ function preallocatedCryptoRandomString(length, alphabet) {
 
   for (let i = 0; i < length; i++) {
     const byte = randomBytes[i];
-    result[i] = alphabet[byte % alphabetLength];
+    result[i] = alphabet[byte % alphabetLength]; // modulo bias here!
   }
 
   return result.join('');
